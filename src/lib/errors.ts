@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { unstable_rethrow } from "next/navigation";
 import { ZodError } from "zod";
 import { PricingError } from "./pricing";
 
@@ -24,6 +25,9 @@ export const noStore = { "Cache-Control": "no-store" } as const;
 
 /** Converts any thrown error into a JSON response without leaking internals. */
 export function errorResponse(e: unknown) {
+  // Let Next.js internal control-flow errors (prerender bail-out, redirect,
+  // notFound) propagate instead of turning them into a 500.
+  unstable_rethrow(e);
   const init = (status: number) => ({ status, headers: noStore });
   if (e instanceof AppError) {
     return NextResponse.json({ error: e.code, message: e.message }, init(e.status));

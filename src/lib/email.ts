@@ -7,6 +7,7 @@ import BookingConfirmationEmail from "@/emails/booking-confirmation";
 import AdminNewBookingEmail from "@/emails/admin-new-booking";
 import AdminPaymentIssueEmail from "@/emails/admin-payment-issue";
 import type { EmailBooking, EmailSite } from "@/emails/types";
+import { adminEmails } from "./admin-emails";
 import { isoToDate } from "./dates";
 import { formatINR } from "./format";
 import { directionsUrl, siteUrl } from "./links";
@@ -26,11 +27,6 @@ function resend() {
 /** Use a verified domain in production, e.g. "Pawna Lake Cottages <bookings@yourdomain.com>". */
 const fromAddress = () => process.env.EMAIL_FROM || `${site.name} <onboarding@resend.dev>`;
 
-export const adminEmails = () =>
-  (process.env.ADMIN_EMAIL ?? "")
-    .split(",")
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
 
 const FOOD = { veg: "Veg", non_veg: "Non-veg", jain: "Jain" } as const;
 
@@ -85,8 +81,12 @@ async function send(opts: { to: string[]; subject: string; react: React.ReactEle
   if (error) console.error(`[email] "${opts.subject}" failed:`, error);
 }
 
-/** Guest confirmation + admin alert. Call only when the booking was *just* confirmed. */
-export async function sendBookingConfirmedEmails(b: BookingRow) {
+/**
+ * Guest confirmation + admin alert. Call only when the booking was *just* confirmed.
+ * `notifyAdmin: false` for bookings the admin entered themselves.
+ */
+export async function sendBookingConfirmedEmails(b: BookingRow, opts: { notifyAdmin?: boolean } = {}) {
+  const { notifyAdmin = true } = opts;
   const eb = toEmailBooking(b);
   const s = emailSite(b.id, eb.cottageName);
   await Promise.allSettled([
@@ -99,7 +99,7 @@ export async function sendBookingConfirmedEmails(b: BookingRow) {
         })
       : Promise.resolve(),
     send({
-      to: adminEmails(),
+      to: notifyAdmin ? adminEmails() : [],
       subject: `New booking ${eb.code}: ${eb.cottageName}, ${format(isoToDate(b.check_in), "d MMM")} (${eb.guests} guests)`,
       react: AdminNewBookingEmail({ b: eb, site: s }),
       idempotencyKey: `admin-new/${b.id}`,

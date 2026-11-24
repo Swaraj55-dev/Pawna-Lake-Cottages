@@ -2,11 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { Fraunces, Inter } from "next/font/google";
 import "./globals.css";
 import { site } from "@/config/site";
-import { Suspense } from "react";
-import { Navbar, NavbarFallback } from "@/components/layout/navbar";
-import { Footer } from "@/components/layout/footer";
-import { SmoothScroll } from "@/components/smooth-scroll";
-import { FloatingContact } from "@/components/contact/floating-contact";
 
 const fraunces = Fraunces({
   variable: "--font-fraunces",
@@ -41,28 +36,18 @@ export const viewport: Viewport = {
   themeColor: "#0e3b43",
 };
 
+/** Root shell only. Public chrome lives in (site)/layout, admin chrome in admin/layout. */
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en-IN" className={`${fraunces.variable} ${inter.variable} antialiased`}>
-      <body className="grain flex min-h-dvh flex-col">
+      <body className="flex min-h-dvh flex-col">
         <a
           href="#main"
           className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-md focus:bg-sand focus:px-4 focus:py-3 focus:text-ink"
         >
           Skip to content
         </a>
-        <SmoothScroll />
-        {/* usePathname() is request-time data on dynamic routes -> Suspense keeps a static shell */}
-        <Suspense fallback={<NavbarFallback />}>
-          <Navbar />
-        </Suspense>
-        <main id="main" className="flex-1">
-          {children}
-        </main>
-        <Footer />
-        <Suspense fallback={null}>
-          <FloatingContact />
-        </Suspense>
+        {children}
       </body>
     </html>
   );
