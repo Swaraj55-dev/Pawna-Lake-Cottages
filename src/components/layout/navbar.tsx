@@ -15,6 +15,25 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
+/** Hook-free header used as the Suspense fallback on request-time routes. */
+export function NavbarFallback() {
+  return (
+    <header className="glass-light fixed inset-x-0 top-0 z-50 text-ink">
+      <div className="container-page flex h-16 items-center justify-between gap-4 md:h-20">
+        <Link href="/" className="font-heading text-base font-semibold sm:text-lg md:text-xl">
+          {site.name}
+        </Link>
+        <Link
+          href="/book"
+          className="inline-flex min-h-11 items-center whitespace-nowrap rounded-full bg-sunset px-4 text-sm font-semibold text-ink sm:px-5"
+        >
+          Book now
+        </Link>
+      </div>
+    </header>
+  );
+}
+
 /** Routes that open with a full-bleed dark hero, where the bar starts transparent. */
 function hasDarkHero(pathname: string) {
   return pathname === "/" || pathname.startsWith("/cottages/");

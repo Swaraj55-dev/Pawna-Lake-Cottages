@@ -2,9 +2,11 @@ import type { Metadata, Viewport } from "next";
 import { Fraunces, Inter } from "next/font/google";
 import "./globals.css";
 import { site } from "@/config/site";
-import { Navbar } from "@/components/layout/navbar";
+import { Suspense } from "react";
+import { Navbar, NavbarFallback } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { SmoothScroll } from "@/components/smooth-scroll";
+import { FloatingContact } from "@/components/contact/floating-contact";
 
 const fraunces = Fraunces({
   variable: "--font-fraunces",
@@ -50,11 +52,17 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           Skip to content
         </a>
         <SmoothScroll />
-        <Navbar />
+        {/* usePathname() is request-time data on dynamic routes -> Suspense keeps a static shell */}
+        <Suspense fallback={<NavbarFallback />}>
+          <Navbar />
+        </Suspense>
         <main id="main" className="flex-1">
           {children}
         </main>
         <Footer />
+        <Suspense fallback={null}>
+          <FloatingContact />
+        </Suspense>
       </body>
     </html>
   );

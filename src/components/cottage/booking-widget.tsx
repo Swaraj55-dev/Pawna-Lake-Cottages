@@ -70,11 +70,17 @@ export function BookingWidget({ c }: { c: Cottage }) {
   );
 }
 
+/** Lifts floating buttons above a mobile bottom bar (below lg). */
+export function BottomBarOffset({ height = 76 }: { height?: number }) {
+  return <style>{`@media (max-width: 1023.98px) { :root { --bottom-bar-h: ${height}px; } }`}</style>;
+}
+
 /** Mobile: fixed bottom bar so the booking CTA is always reachable. */
 export function BookingBar({ c }: { c: Cottage }) {
   const from = fromPrice(c);
   return (
-    <div className="glass-light fixed inset-x-0 bottom-0 z-40 border-t border-ink/10 pb-[env(safe-area-inset-bottom)] lg:hidden">
+    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-ink/10 bg-sand/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_30px_-12px_rgb(20_32_31/0.25)] backdrop-blur-md lg:hidden">
+      <BottomBarOffset />
       <div className="container-page flex items-center justify-between gap-4 py-3">
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold">{c.name}</p>

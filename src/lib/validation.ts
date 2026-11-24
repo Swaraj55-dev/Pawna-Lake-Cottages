@@ -33,3 +33,23 @@ export const indianPhoneSchema = z
   .transform((s) => s.replace(/[\s()-]/g, ""))
   .refine((s) => /^(?:\+?91|0)?[6-9]\d{9}$/.test(s), { message: "Enter a valid 10-digit Indian mobile number" })
   .transform((s) => s.slice(-10));
+
+export const foodPrefSchema = z.enum(["veg", "non_veg", "jain"], { message: "Choose a food preference" });
+
+export const guestDetailsSchema = z.object({
+  name: z.string().trim().min(2, "Please enter your full name").max(120, "Name is too long"),
+  phone: indianPhoneSchema,
+  email: z.string().trim().pipe(z.email("Enter a valid email address")).pipe(z.string().max(200)),
+  foodPref: foodPrefSchema,
+  notes: z.string().trim().max(1000, "Please keep requests under 1000 characters").optional().default(""),
+  agree: z.literal(true, { message: "Please accept the cancellation policy to continue" }),
+});
+
+export type GuestDetailsInput = z.input<typeof guestDetailsSchema>;
+export type GuestDetails = z.output<typeof guestDetailsSchema>;
+
+/** Body of POST /api/bookings — amounts are never accepted from the client. */
+export const createBookingSchema = z.object({
+  stay: stayRequestSchema,
+  details: guestDetailsSchema,
+});

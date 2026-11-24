@@ -9,6 +9,7 @@ import { formatINR, fromPrice, weekdayLabel, weekendLabel } from "@/lib/format";
 import { CottageMedia } from "@/components/cottage/cottage-media";
 import { BookingBar, BookingWidget } from "@/components/cottage/booking-widget";
 import { Reveal } from "@/components/motion/reveal";
+import { ProvideEnquiry } from "@/components/contact/enquiry-store";
 
 export function generateStaticParams() {
   return cottages.map((c) => ({ slug: c.slug }));
@@ -228,6 +229,7 @@ export default async function CottagePage({ params }: PageProps<"/cottages/[slug
       )}
 
       <BookingBar c={c} />
+      <ProvideEnquiry cottageName={c.name} />
     </article>
   );
 }

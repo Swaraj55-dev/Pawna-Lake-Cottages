@@ -1,13 +1,9 @@
 import { Car, MapPin, Navigation } from "lucide-react";
 import { site } from "@/config/site";
+import { directionsUrl } from "@/lib/links";
 import { Reveal } from "@/components/motion/reveal";
 import { SectionHeading } from "./section-heading";
 
-export function directionsUrl() {
-  if (site.mapsDirectionsUrl) return site.mapsDirectionsUrl;
-  const dest = site.address || `${site.name}, Pawna Lake, Maval, Pune`;
-  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}`;
-}
 
 export function Location() {
   return (
