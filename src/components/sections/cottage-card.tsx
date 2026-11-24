@@ -101,10 +101,10 @@ export function CottageCard({ c }: { c: CottageCardData }) {
   return (
     <article
       aria-labelledby={`cottage-${c.slug}`}
-      className="group relative overflow-hidden rounded-3xl bg-card shadow-[0_20px_60px_-30px_rgb(14_59_67/0.45)] ring-1 ring-ink/5"
+      className="group relative flex h-full flex-col overflow-hidden rounded-3xl bg-card shadow-[0_20px_60px_-30px_rgb(14_59_67/0.45)] ring-1 ring-ink/5"
     >
       <Carousel images={c.images} name={c.name} />
-      <div className="space-y-4 p-6 md:p-8">
+      <div className="flex flex-1 flex-col gap-4 p-6 md:p-8">
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
           <h3 id={`cottage-${c.slug}`} className="text-3xl">
             {c.name}
@@ -135,7 +135,7 @@ export function CottageCard({ c }: { c: CottageCardData }) {
             </li>
           ))}
         </ul>
-        <div className="flex flex-wrap gap-3 pt-2">
+        <div className="mt-auto flex flex-wrap gap-3 pt-2">
           <Link
             href={`/book?type=${c.slug}`}
             className="inline-flex min-h-12 flex-1 items-center justify-center rounded-full bg-lake px-6 font-semibold text-sand transition-colors hover:bg-lake-deep sm:flex-none"

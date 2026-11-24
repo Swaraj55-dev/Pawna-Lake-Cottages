@@ -2,6 +2,7 @@ import { cottages } from "@/config/site";
 import { getImages } from "@/lib/images";
 import { formatINR, fromPrice } from "@/lib/format";
 import { Reveal } from "@/components/motion/reveal";
+import { TiltCard } from "@/components/motion/tilt-card";
 import { SectionHeading } from "./section-heading";
 import { CottageCard, type CottageCardData } from "./cottage-card";
 
@@ -36,8 +37,10 @@ export async function CottageShowcase() {
         />
         <div className="grid gap-8 md:grid-cols-2">
           {cards.map((c, i) => (
-            <Reveal key={c.slug} delay={i * 0.1}>
-              <CottageCard c={c} />
+            <Reveal key={c.slug} delay={i * 0.1} className="h-full">
+              <TiltCard className="h-full">
+                <CottageCard c={c} />
+              </TiltCard>
             </Reveal>
           ))}
         </div>
