@@ -68,4 +68,6 @@ export type ContactInput = z.input<typeof contactSchema>;
 export const createBookingSchema = z.object({
   stay: stayRequestSchema,
   details: guestDetailsSchema,
+  /** The caller's own previous hold to release when they change their stay (SEC-01). */
+  replaceBookingId: z.uuid().optional(),
 });

@@ -8,7 +8,7 @@ const avail = async (slug, from, to) =>
   (await db.query("select night::text, available, booked, blocked from get_availability($1,$2,$3)", [slug, from, to])).rows;
 const book = (slug, ci, co, guests, cottages, extra = {}) =>
   db.query(
-    `select * from create_booking($1,$2,$3,$4,$5,'Test Guest','9876543210','t@example.com','veg',null,1000,500,'{}'::jsonb${extra.status ? ",'phone','" + extra.status + "'" : ""})`,
+    `select * from create_booking($1,$2,$3,$4,$5,'Test Guest','9' || lpad((floor(random()*1e9))::bigint::text, 9, '0'),'t@example.com','veg',null,1000,500,'{}'::jsonb${extra.status ? ",'phone','" + extra.status + "'" : ""})`,
     [slug, ci, co, guests, cottages],
   );
 
@@ -26,13 +26,13 @@ const holdMin = (new Date(b1.expires_at) - new Date(b1.created_at)) / 60000;
 ok(Math.abs(holdMin - 15) < 0.1, "15-minute hold set", holdMin);
 a = await avail("aroma", "2026-12-03", "2026-12-07");
 ok(JSON.stringify(a.map((r) => r.available)) === "[5,2,2,5]", "only nights 4 & 5 reduced (check-out night free)", JSON.stringify(a));
-await expectError(`select create_booking('aroma','2026-12-05','2026-12-06',6,3,'x','9876543210',null,null,null,1,0,null)`, [], "NOT_AVAILABLE", "overbooking rejected (needs 3, 2 left)");
+await expectError(`select create_booking('aroma','2026-12-05','2026-12-06',6,3,'x','9' || lpad((floor(random()*1e9))::bigint::text, 9, '0'),null,null,null,1,0,null)`, [], "NOT_AVAILABLE", "overbooking rejected (needs 3, 2 left)");
 await book("aroma", "2026-12-05", "2026-12-06", 4, 2);
 ok((await avail("aroma", "2026-12-05", "2026-12-06"))[0].available === 0, "fills to exactly 0");
 ok((await avail("bella", "2026-12-05", "2026-12-06"))[0].available === 5, "other cottage type unaffected");
-await expectError(`select create_booking('aroma','2026-12-06','2026-12-05',2,1,'x','9876543210',null,null,null,1,0,null)`, [], "INVALID_DATES", "reversed dates rejected");
-await expectError(`select create_booking('zzz','2026-12-06','2026-12-07',2,1,'x','9876543210',null,null,null,1,0,null)`, [], "UNKNOWN_COTTAGE", "unknown cottage rejected");
-await expectError(`select create_booking('bella','2026-12-06','2026-12-07',9,2,'x','9876543210',null,null,null,1,0,null)`, [], "INVALID_GUESTS", "too many guests for cottages rejected");
+await expectError(`select create_booking('aroma','2026-12-06','2026-12-05',2,1,'x','9' || lpad((floor(random()*1e9))::bigint::text, 9, '0'),null,null,null,1,0,null)`, [], "INVALID_DATES", "reversed dates rejected");
+await expectError(`select create_booking('zzz','2026-12-06','2026-12-07',2,1,'x','9' || lpad((floor(random()*1e9))::bigint::text, 9, '0'),null,null,null,1,0,null)`, [], "UNKNOWN_COTTAGE", "unknown cottage rejected");
+await expectError(`select create_booking('bella','2026-12-06','2026-12-07',9,2,'x','9' || lpad((floor(random()*1e9))::bigint::text, 9, '0'),null,null,null,1,0,null)`, [], "INVALID_GUESTS", "too many guests for cottages rejected");
 
 const conf = (await book("bella", "2026-12-20", "2026-12-21", 2, 1, { status: "confirmed" })).rows[0];
 ok(conf.status === "confirmed" && conf.expires_at === null && conf.confirmed_at !== null && conf.source === "phone", "manual confirmed booking (no hold, source=phone)");
@@ -42,7 +42,7 @@ await db.query(`insert into blocked_dates (cottage_slug, date, reason) values ('
 await db.query(`insert into blocked_dates (cottage_slug, date, units_blocked, reason) values ('bella','2026-12-11',2,'maintenance')`);
 a = await avail("bella", "2026-12-09", "2026-12-12");
 ok(JSON.stringify(a.map((r) => r.available)) === "[5,0,3]", "whole-type block -> 0, partial block -> 3", JSON.stringify(a));
-await expectError(`select create_booking('bella','2026-12-09','2026-12-11',2,1,'x','9876543210',null,null,null,1,0,null)`, [], "NOT_AVAILABLE", "booking across a blocked night rejected");
+await expectError(`select create_booking('bella','2026-12-09','2026-12-11',2,1,'x','9' || lpad((floor(random()*1e9))::bigint::text, 9, '0'),null,null,null,1,0,null)`, [], "NOT_AVAILABLE", "booking across a blocked night rejected");
 
 console.log("\nexpiry");
 await db.query(`update bookings set expires_at = now() - interval '1 minute' where id = $1`, [b1.id]);
@@ -60,7 +60,7 @@ ok((await db.query("select * from bookings")).rows.length === 0, "anon sees no b
 ok((await db.query("select * from blocked_dates")).rows.length === 0, "anon sees no blocked dates (reasons private)");
 ok((await db.query("select * from cottage_types")).rows.length === 2, "anon can read cottage types");
 ok((await db.query("select * from get_availability('bella','2026-12-09','2026-12-12')")).rows.length === 3, "anon can call get_availability");
-await expectError(`select create_booking('bella','2026-12-25','2026-12-26',2,1,'x','9876543210',null,null,null,1,0,null)`, [], "permission denied", "anon cannot call create_booking");
+await expectError(`select create_booking('bella','2026-12-25','2026-12-26',2,1,'x','9' || lpad((floor(random()*1e9))::bigint::text, 9, '0'),null,null,null,1,0,null)`, [], "permission denied", "anon cannot call create_booking");
 await expectError(`select expire_pending_bookings()`, [], "permission denied", "anon cannot call expire_pending_bookings");
 await expectError(`insert into contact_messages (name, message) values ('a','b')`, [], "row-level security", "anon cannot insert contact messages directly");
 const upd = await db.query(`update cottage_types set units_available = 99`);

@@ -6,7 +6,7 @@ const { ok, done } = makeAsserts(db);
 
 const mk = async (ci, co, n, order) => {
   const b = (await db.query(
-    `select * from create_booking('aroma',$1,$2,$3::int * 2,$3,'G','9876543210','g@x.com','veg',null,4000,2000,'{}')`, [ci, co, n])).rows[0];
+    `select * from create_booking('aroma',$1,$2,$3::int * 2,$3,'G','9' || lpad((floor(random()*1e9))::bigint::text, 9, '0'),'g@x.com','veg',null,4000,2000,'{}')`, [ci, co, n])).rows[0];
   await db.query(`update bookings set razorpay_order_id=$1 where id=$2`, [order, b.id]);
   return b;
 };

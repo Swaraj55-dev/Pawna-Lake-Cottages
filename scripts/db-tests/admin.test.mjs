@@ -6,7 +6,7 @@ const { ok, expectError, done } = makeAsserts(db);
 const err = (sql, params, match, m) => expectError(sql, params, match, m);
 
 const mk = async (ci, co, n, status = "pending_payment") =>
-  (await db.query(`select * from create_booking('bella',$1,$2,$3,$3,'G','9876543210',null,null,null,1000,500,null,'phone',$4)`, [ci, co, n, status])).rows[0];
+  (await db.query(`select * from create_booking('bella',$1,$2,$3,$3,'G','9' || lpad((floor(random()*1e9))::bigint::text, 9, '0'),null,null,null,1000,500,null,'phone',$4)`, [ci, co, n, status])).rows[0];
 const set = async (id, s, note = null) => (await db.query(`select * from admin_set_booking_status($1,$2,$3)`, [id, s, note])).rows[0];
 const SQL = `select * from admin_set_booking_status($1,$2,$3)`;
 

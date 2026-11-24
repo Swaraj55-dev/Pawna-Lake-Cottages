@@ -172,7 +172,11 @@ export function BookingFlow({ cottages }: { cottages: BookCottage[] }) {
         prev?.key === key && prev.session.expiresAt && Date.parse(prev.session.expiresAt) - Date.now() > 60_000;
       const session = reusable
         ? prev.session
-        : await apiFetch<BookingSession>("/api/bookings", { method: "POST", body: key });
+        : await apiFetch<BookingSession>("/api/bookings", {
+            method: "POST",
+            // release our own earlier hold if the guest changed their stay (SEC-01)
+            body: JSON.stringify({ stay, details, replaceBookingId: prev?.session.bookingId }),
+          });
       sessionRef.current = { key, session };
       setTestMode(Boolean(session.testMode));
 

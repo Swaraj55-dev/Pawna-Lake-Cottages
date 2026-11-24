@@ -4,6 +4,7 @@ import { AppError, errorResponse, noStore } from "@/lib/errors";
 import { getServerQuote } from "@/lib/quote";
 import { createOrder, isRazorpayConfigured, isTestMode, razorpayKeyId } from "@/lib/razorpay";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { hashClientIp } from "@/lib/ip-hash";
 import { getServiceClient } from "@/lib/supabase/admin";
 import type { BookingRow } from "@/lib/supabase/types";
 import { createBookingSchema } from "@/lib/validation";
@@ -14,6 +15,11 @@ const SQL_ERRORS: Record<string, AppError> = {
   INVALID_GUESTS: new AppError("INVALID_GUESTS", "That many guests won't fit — add another cottage.", 400),
   INVALID_DATES: new AppError("INVALID_DATES", "Please check your dates.", 400),
   UNKNOWN_COTTAGE: new AppError("UNKNOWN_COTTAGE", "Unknown cottage type.", 400),
+  TOO_MANY_HOLDS: new AppError(
+    "TOO_MANY_HOLDS",
+    "You already have a booking waiting for payment. Complete it, or wait 15 minutes and try again — or book on WhatsApp.",
+    429,
+  ),
 };
 
 /**
@@ -28,7 +34,7 @@ export async function POST(request: Request) {
       throw new AppError("RATE_LIMITED", "Too many booking attempts. Please wait a few minutes or book on WhatsApp.", 429);
     }
 
-    const { stay, details } = createBookingSchema.parse(await request.json().catch(() => null));
+    const { stay, details, replaceBookingId } = createBookingSchema.parse(await request.json().catch(() => null));
     if (!isRazorpayConfigured()) {
       throw new AppError("NOT_CONFIGURED", "Online payment isn't set up yet. Please book on WhatsApp or call us.", 503);
     }
@@ -63,6 +69,9 @@ export async function POST(request: Request) {
       p_source: "website",
       p_status: payNothing ? "confirmed" : "pending_payment",
       p_hold_minutes: site.holdMinutes,
+      // SEC-01: hold limits per phone / hashed IP (raw IP never stored)
+      p_client_ip_hash: hashClientIp(clientIp(request)),
+      p_replace_booking_id: replaceBookingId ?? null,
     });
     if (error) {
       const known = Object.keys(SQL_ERRORS).find((k) => error.message.includes(k));
