@@ -50,7 +50,7 @@ export function Navbar() {
       >
         <Link
           href="/"
-          className="font-heading text-lg font-semibold leading-tight md:text-xl"
+          className="min-w-0 font-heading text-base font-semibold leading-tight sm:text-lg md:text-xl"
         >
           {site.name}
         </Link>
@@ -91,7 +91,7 @@ export function Navbar() {
           )}
           <Link
             href="/book"
-            className="inline-flex min-h-11 items-center rounded-full bg-sunset px-5 text-sm font-semibold text-ink shadow-sm transition-transform hover:-translate-y-0.5 hover:bg-[#f5b673]"
+            className="inline-flex min-h-11 items-center whitespace-nowrap rounded-full bg-sunset px-4 text-sm sm:px-5 font-semibold text-ink shadow-sm transition-transform hover:-translate-y-0.5 hover:bg-[#f5b673]"
           >
             Book now
           </Link>

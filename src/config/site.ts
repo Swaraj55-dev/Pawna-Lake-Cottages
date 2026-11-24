@@ -115,6 +115,33 @@ export const faqs: { q: string; a: string }[] = [
   // TODO: add real FAQs, e.g. { q: "What are check-in and check-out times?", a: "..." }
 ];
 
+/**
+ * "A stay at the camp" timeline on the home page. Times are optional — only
+ * check-in/out come from config. TODO: confirm the order and copy match your
+ * actual schedule; delete any step you don't offer.
+ */
+export const experience: { key: string; title: string; time?: string; desc: string }[] = [
+  { key: "checkin", title: "Check-in", time: site.checkIn, desc: "Arrive, settle into your cottage and take in the lake." },
+  { key: "tea", title: "Tea & snacks", desc: "Evening tea with snacks as the light turns gold." },
+  { key: "boating", title: "Boating", desc: "Out on the water for the Pawna Lake sunset." },
+  { key: "bbq", title: "BBQ & campfire", desc: "Gather around the fire as the evening cools." },
+  { key: "dinner", title: "Dinner", desc: "A relaxed dinner under the open sky." },
+  { key: "stars", title: "Stargazing", desc: "Far from city lights, the night sky opens up." },
+  { key: "breakfast", title: "Breakfast", desc: "Wake up to the lake and a warm breakfast." },
+  { key: "checkout", title: "Check-out", time: site.checkOut, desc: "Head home slow, already planning the next trip." },
+];
+
+/** Image categories, each mapped to a folder in /public/images. */
+export const galleryCategories = [
+  { key: "aroma", label: "Aroma" },
+  { key: "bella", label: "Bella" },
+  { key: "lake", label: "Lake" },
+  { key: "food", label: "Food" },
+  { key: "activities", label: "Activities" },
+  { key: "night", label: "Night" },
+] as const;
+export type GalleryCategory = (typeof galleryCategories)[number]["key"];
+
 /** Only real reviews. Leave empty to hide the Reviews section. */
 export const reviews: Review[] = [];
 
