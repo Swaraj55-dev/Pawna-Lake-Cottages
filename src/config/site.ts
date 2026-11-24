@@ -62,6 +62,12 @@ export const site = {
    * night's *start date* (0 = Sunday … 6 = Saturday). Default: Fri + Sat nights.
    */
   weekendNights: [5, 6] as number[],
+  /** Longest stay bookable online, in nights. */
+  maxNights: 14,
+  /** How far ahead guests can book online, in days. */
+  bookingWindowDays: 365,
+  /** Minutes a pending booking holds the cottage while the guest pays. */
+  holdMinutes: 15,
   /** Google rating badge — leave `null` until you have the real figure. */
   googleRating: null as { rating: number; count: number } | null,
   /** Approximate driving distances shown in the Location section. TODO: confirm. */
