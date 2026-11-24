@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, ClipboardList, Plus, SlidersHorizontal } from "lucide-react";
+import { CalendarDays, ClipboardList, MessageSquareQuote, Plus, SlidersHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const links = [
   { href: "/admin", label: "Bookings", Icon: ClipboardList },
+  { href: "/admin/reviews", label: "Reviews", Icon: MessageSquareQuote },
   { href: "/admin/new", label: "New booking", Icon: Plus },
   { href: "/admin/calendar", label: "Occupancy", Icon: CalendarDays },
   { href: "/admin/availability", label: "Blocks & prices", Icon: SlidersHorizontal },

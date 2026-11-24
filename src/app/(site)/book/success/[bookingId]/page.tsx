@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { CalendarPlus, CheckCircle2, Clock, Loader2, Navigation, XCircle } from "lucide-react";
 import { getCottage, site } from "@/config/site";
 import { getBookingById } from "@/lib/bookings";
+import { formatFoodCounts, formatGuestParty } from "@/lib/booking-details";
 import { googleCalendarUrl } from "@/lib/calendar";
 import { isoToDate } from "@/lib/dates";
 import { formatINR } from "@/lib/format";
@@ -18,7 +19,6 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-const FOOD = { veg: "Veg", non_veg: "Non-veg", jain: "Jain" } as const;
 const d = (iso: string) => format(isoToDate(iso), "EEE, d MMM yyyy");
 
 async function BookingDetails({ params }: { params: Promise<{ bookingId: string }> }) {
@@ -104,7 +104,8 @@ async function BookingDetails({ params }: { params: Promise<{ bookingId: string 
       <dl className="mt-10 grid gap-px overflow-hidden rounded-3xl bg-ink/10 ring-1 ring-ink/5 sm:grid-cols-2">
         {[
           ["Cottage", `${name}${b.cottages_count > 1 ? ` × ${b.cottages_count}` : ""}`],
-          ["Guests", `${b.guests}${b.food_pref ? ` · ${FOOD[b.food_pref]}` : ""}`],
+          ["Guests", `${b.guests} · ${formatGuestParty(b)}`],
+          ["Food preferences", formatFoodCounts(b)],
           ["Check-in", `${d(b.check_in)}, ${site.checkIn}`],
           ["Check-out", `${d(b.check_out)}, ${site.checkOut}`],
           ["Total", formatINR(b.total_amount)],

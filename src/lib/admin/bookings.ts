@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getServiceClient } from "@/lib/supabase/admin";
 import type { BookingRow } from "@/lib/supabase/types";
 import { requireAdmin } from "@/lib/admin-auth";
+import { formatFoodCounts } from "@/lib/booking-details";
 import { isoDateSchema } from "@/lib/validation";
 
 export const STATUSES = ["pending_payment", "confirmed", "cancelled", "completed"] as const;
@@ -98,10 +99,13 @@ export function bookingsToCsv(rows: BookingRow[]): string {
     ["Check-out", (b) => b.check_out],
     ["Nights", (b) => b.nights],
     ["Guests", (b) => b.guests],
+    ["Adults (11+)", (b) => b.adult_count],
+    ["Children (5-10)", (b) => b.child_half_count],
+    ["Children (under 5)", (b) => b.child_free_count],
     ["Name", (b) => b.name],
     ["Phone", (b) => b.phone],
     ["Email", (b) => b.email],
-    ["Food", (b) => b.food_pref],
+    ["Food preferences", (b) => formatFoodCounts(b)],
     ["Total (INR)", (b) => b.total_amount],
     ["Advance (INR)", (b) => b.advance_amount],
     ["Paid (INR)", (b) => b.amount_paid],

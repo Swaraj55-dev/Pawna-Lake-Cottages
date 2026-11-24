@@ -75,13 +75,13 @@ What to fill in:
 - **Brand** — `name`, `tagline`, `description` (used for SEO; mention your real inclusions).
 - **Contact** — `address`, `phone` (`+91…`), `whatsapp` (digits only), `email`, `socials`.
 - **Map** — `mapsEmbedUrl` (Google Maps → Share → *Embed a map* → copy the `src` URL) and `mapsDirectionsUrl` (Share → *Copy link*).
-- **Stay rules** — `checkIn`, `checkOut`, `advancePercent`, `convenienceFee`, `weekendNights` (default Fri + Sat nights), `maxNights`, `bookingWindowDays`, `holdMinutes`.
-- **Cottages** — for each of Aroma and Bella: descriptions, `maxGuests`, `baseGuests`, `unitsAvailable`, `pricePerPerson.weekday/weekend`, `extraPersonPrice`, `amenities`.
+- **Stay rules** — `checkIn`, `checkOut`, `convenienceFee`, `weekendNights` (default Fri + Sat nights), `maxNights`, `bookingWindowDays`, `holdMinutes`.
+- **Cottages** — for each of Aroma and Bella: descriptions, `maxGuests`, `baseGuests`, `unitsAvailable`, `pricePerPerson.weekday/weekend`, `extraPersonPrice`, `advancePercent`, `cancellationPolicy`, `houseRules`, `mealPlan`, `amenities`.
   - While prices are `null` the site shows **"Price on request"** and online booking routes guests to WhatsApp.
-- **Content** — `inclusions`, `experience` (stay timeline), `faqs`, `reviews` (**real reviews only**), `googleRating` (real figure or `null`), `videos` (YouTube IDs), `about.story`.
-- **Policies** — `policies.cancellation`, `policies.rules`, `policies.checkInNote`, `policies.lastUpdated`.
+- **Content** — `inclusions`, `experience` (shared stay highlights), `faqs`, `reviews` (**real reviews only**), `googleRating` (real figure or `null`), `videos` (YouTube IDs), `about.story`.
+- **Shared policy note** — `policies.checkInNote`, `policies.lastUpdated`; cancellation terms and house rules belong to each cottage.
 
-**Pricing model** (`src/lib/pricing.ts`): each night uses the weekday or weekend per-person rate, or a **price override** set in the admin. Guests up to `baseGuests × cottages` pay the per-person rate; extra guests pay `extraPersonPrice`. A flat `convenienceFee` is added once. The guest pays `advancePercent` online; the rest at check-in.
+**Pricing model** (`src/lib/pricing.ts`): each night uses the weekday or weekend per-person rate, or a **price override** set in the admin. Guests up to `baseGuests × cottages` pay the per-person rate; extra guests pay `extraPersonPrice`. A flat `convenienceFee` is added once. The guest pays the selected cottage's `advancePercent` online; the rest at check-in.
 
 After changing **`unitsAvailable`, `maxGuests` or `baseGuests`**, sync them to the database (availability is calculated there):
 
@@ -108,6 +108,10 @@ npm run db:sync-cottages -- --dry   # preview only
 | `supabase/migrations/20261124000000_init.sql` | tables, `get_availability`, `create_booking` (overbooking-safe), hold expiry, RLS, seed cottage types |
 | `supabase/migrations/20261124000100_payments.sql` | `confirm_booking_payment` — atomic, idempotent payment confirmation |
 | `supabase/migrations/20261124000200_admin.sql` | `admin_set_booking_status` — safe manual status changes |
+| `supabase/migrations/20261125000100_sec01_hold_limits.sql` | Limits active booking holds per phone number and IP |
+| `supabase/migrations/20261125000200_sec03_payment_validation.sql` | Validates payment amount and currency before confirmation |
+| `supabase/migrations/20261125000300_sec04_expired_payment_holds.sql` | Safely handles late payments for expired booking holds |
+| `supabase/migrations/20261125000400_guest_parties_and_reviews.sql` | Age-based guest counts, dietary breakdowns, and moderated guest reviews |
 
 **Option A — Supabase CLI**
 ```bash
@@ -295,8 +299,9 @@ public/images/         photos by category
 
 - [ ] Every `TODO` in `src/config/site.ts` filled in (brand, contact, prices, units, descriptions, policies)
 - [ ] Real photos added; placeholders removed (`npm run placeholders -- --clean`); hero posters replaced
-- [ ] Supabase: 3 migrations run, `npm run db:sync-cottages` done, auth redirect URLs set, SMTP configured
+- [ ] Supabase: all migrations run, cottage data synced, auth redirect URLs set, SMTP configured
 - [ ] `ADMIN_EMAIL` set; admin login tested
+- [ ] Submit a guest review and approve it from `/admin/reviews`
 - [ ] Resend domain verified; `EMAIL_FROM` set; confirmation email received in a test booking
 - [ ] Razorpay test booking end-to-end (pay, cancel, failed payment) and webhook delivery OK in the dashboard
 - [ ] Policies reviewed; `policies.lastUpdated` set

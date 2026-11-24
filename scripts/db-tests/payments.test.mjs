@@ -50,7 +50,7 @@ console.log("late payment but sold out");
 const b3 = await mk("2026-12-20", "2026-12-21", 3, "order_3");
 await db.query(`update bookings set expires_at = now() - interval '1 minute' where id=$1`, [b3.id]);
 await db.query(`select expire_pending_bookings()`);
-await mk("2026-12-20", "2026-12-21", 3, "order_3b"); // someone else takes 3 of 5
+await mk("2026-12-20", "2026-12-21", 18, "order_3b"); // someone else takes 18 of 20
 r = await confirm("order_3", "pay_3");
 ok(r.outcome === "refund_required", "only 2 left, needs 3 -> refund_required");
 s = await row(b3.id);
@@ -76,10 +76,10 @@ s = await row(b7.id);
 ok(s.status === "pending_payment" && s.status_note.includes("USD"), "wrong currency is recorded for admin review");
 
 console.log("expired unswept hold cannot overbook after admin reactivation");
-const b8 = await mk("2027-01-20", "2027-01-21", 4, "order_8");
+const b8 = await mk("2027-01-20", "2027-01-21", 18, "order_8");
 await db.query(`update bookings set status='confirmed', expires_at=null, confirmed_at=now() where id=$1`, [b8.id]);
 await db.query(`update bookings set status='cancelled', status_note='cancelled by admin', confirmed_at=null where id=$1`, [b8.id]);
-const b9 = await mk("2027-01-20", "2027-01-21", 2, "order_9");
+const b9 = await mk("2027-01-20", "2027-01-21", 3, "order_9");
 await db.query(`update bookings set expires_at=now() - interval '1 minute' where id=$1`, [b9.id]);
 r = (await db.query(`select * from admin_set_booking_status($1,'confirmed',null)`, [b8.id])).rows[0];
 ok(r.status === "confirmed", "admin can reactivate the cancelled booking after the expired hold is swept");

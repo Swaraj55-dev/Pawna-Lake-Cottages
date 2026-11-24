@@ -5,7 +5,12 @@ import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import type { CottageSlug } from "@/config/site";
 import { formatINR } from "@/lib/format";
-import { guestDetailsSchema, type GuestDetailsInput, type StayRequest } from "@/lib/validation";
+import {
+  guestDetailsSchema,
+  guestDetailsSchemaForGuests,
+  type GuestDetailsInput,
+  type StayRequest,
+} from "@/lib/validation";
 import { useProvideEnquiry } from "@/components/contact/enquiry-store";
 import { ApiError, apiFetch } from "./api";
 import { openCheckout, type BookingSession } from "./checkout";
@@ -26,7 +31,24 @@ const TITLES = ["Choose your cottage", "Pick your dates", "Guests & cottages", "
 function readStoredDraft(): Draft | null {
   try {
     const raw = sessionStorage.getItem(STORAGE_KEY);
-    return raw ? { ...EMPTY_DRAFT, ...(JSON.parse(raw) as Draft) } : null;
+    if (!raw) return null;
+    const stored = JSON.parse(raw) as Partial<Draft> & {
+      details?: (Partial<GuestDetailsInput> & { foodPref?: string }) | null;
+    };
+    const draft: Draft = { ...EMPTY_DRAFT, ...stored };
+    if (!stored.party) draft.party = { adults: draft.guests, childrenHalf: 0, childrenFree: 0 };
+    if (stored.details) {
+      const { foodPref, ...details } = stored.details;
+      const foodCounts =
+        details.foodCounts ??
+        ({
+          veg: foodPref === "veg" ? draft.guests : 0,
+          nonVeg: foodPref === "non_veg" ? draft.guests : 0,
+          jain: foodPref === "jain" ? draft.guests : 0,
+        } as const);
+      draft.details = { ...details, foodCounts };
+    }
+    return draft;
   } catch {
     return null;
   }
@@ -36,8 +58,13 @@ function readStoredDraft(): Draft | null {
 function maxValidStep(d: Draft, cottage?: BookCottage): number {
   if (!d.type || !cottage) return 0;
   if (!d.checkIn || !d.checkOut) return 1;
-  if (d.guests < d.cottages || d.guests > cottage.maxGuests * d.cottages) return 2;
-  if (!d.details || !guestDetailsSchema.safeParse(d.details).success) return 3;
+  if (
+    d.guests < d.cottages ||
+    d.guests > cottage.maxGuests * d.cottages ||
+    d.party.adults < d.cottages ||
+    d.party.adults + d.party.childrenHalf + d.party.childrenFree !== d.guests
+  ) return 2;
+  if (!d.details || !guestDetailsSchemaForGuests(d.guests).safeParse(d.details).success) return 3;
   return 4;
 }
 
@@ -144,7 +171,14 @@ export function BookingFlow({ cottages }: { cottages: BookCottage[] }) {
   /* ---------------- live server quote ---------------- */
   const stay: StayRequest | null =
     draft?.type && draft.checkIn && draft.checkOut
-      ? { type: draft.type, checkIn: draft.checkIn, checkOut: draft.checkOut, guests: draft.guests, cottages: draft.cottages }
+      ? {
+          type: draft.type,
+          checkIn: draft.checkIn,
+          checkOut: draft.checkOut,
+          guests: draft.guests,
+          party: draft.party,
+          cottages: draft.cottages,
+        }
       : null;
   const quote = useQuote(step >= 1 ? stay : null);
 
@@ -294,14 +328,21 @@ export function BookingFlow({ cottages }: { cottages: BookCottage[] }) {
               cottage={cottage}
               checkIn={draft.checkIn}
               checkOut={draft.checkOut}
-              guests={draft.guests}
+              party={draft.party}
               cottagesCount={draft.cottages}
-              onChange={(guests, n) => update({ guests, cottages: n })}
+              onChange={(party, n) =>
+                update({
+                  party,
+                  guests: party.adults + party.childrenHalf + party.childrenFree,
+                  cottages: n,
+                })
+              }
             />
           )}
 
           {step === 3 && (
             <StepDetails
+              guestCount={draft.guests}
               defaultValues={draft.details}
               onChange={(v) => update({ details: { ...draft.details, ...v } })}
               onValid={(_raw, parsed) => {

@@ -9,6 +9,7 @@ import AdminPaymentIssueEmail from "@/emails/admin-payment-issue";
 import AdminContactEmail from "@/emails/admin-contact";
 import type { EmailBooking, EmailSite } from "@/emails/types";
 import { adminEmails } from "./admin-emails";
+import { formatFoodCounts, formatGuestParty } from "./booking-details";
 import { isoToDate } from "./dates";
 import { formatINR } from "./format";
 import { directionsUrl, siteUrl } from "./links";
@@ -29,8 +30,6 @@ function resend() {
 const fromAddress = () => process.env.EMAIL_FROM || `${site.name} <onboarding@resend.dev>`;
 
 
-const FOOD = { veg: "Veg", non_veg: "Non-veg", jain: "Jain" } as const;
-
 export function toEmailBooking(b: BookingRow): EmailBooking {
   const cottage = getCottage(b.cottage_slug);
   const fmt = (iso: string, time: string) => `${format(isoToDate(iso), "EEE, d MMM yyyy")}, ${time}`;
@@ -46,7 +45,9 @@ export function toEmailBooking(b: BookingRow): EmailBooking {
     name: b.name,
     phone: b.phone,
     email: b.email,
-    foodPref: b.food_pref ? FOOD[b.food_pref] : null,
+    partySummary: formatGuestParty(b),
+    foodSummary:
+      b.food_veg_count + b.food_non_veg_count + b.food_jain_count > 0 ? formatFoodCounts(b) : null,
     notes: b.notes,
     total: formatINR(b.total_amount),
     paid: formatINR(b.amount_paid),
@@ -56,18 +57,19 @@ export function toEmailBooking(b: BookingRow): EmailBooking {
   };
 }
 
-export function emailSite(bookingId: string, cottageName?: string): EmailSite {
+export function emailSite(bookingId: string, cottageSlug?: string): EmailSite {
+  const cottage = cottageSlug ? getCottage(cottageSlug) : undefined;
   return {
     name: site.name,
     address: site.address,
     phone: site.phone,
-    whatsappUrl: whatsappLink({ cottageName }),
+    whatsappUrl: whatsappLink({ cottageName: cottage?.name }),
     directionsUrl: directionsUrl(),
     siteUrl: siteUrl(),
     bookingUrl: siteUrl(`/book/success/${bookingId}`),
     adminUrl: siteUrl("/admin"),
-    cancellationPolicy: policies.cancellation,
-    checkInNote: policies.checkInNote,
+    cancellationPolicy: cottage?.cancellationPolicy ?? "",
+    checkInNote: cottage?.checkInNote ?? policies.checkInNote,
   };
 }
 
@@ -90,13 +92,13 @@ async function send(opts: {
   return !error;
 }
 
-export async function sendContactEmail(m: { id: string; name: string; email: string; phone: string; message: string }) {
+export async function sendContactEmail(m: { id: string; name: string; email: string | null; phone: string; message: string }) {
   return send({
     to: adminEmails(),
     subject: `Website message from ${m.name}`,
     react: AdminContactEmail({ brand: site.name, m }),
     idempotencyKey: `contact/${m.id}`,
-    replyTo: m.email,
+    replyTo: m.email ?? undefined,
   });
 }
 
@@ -107,7 +109,7 @@ export async function sendContactEmail(m: { id: string; name: string; email: str
 export async function sendBookingConfirmedEmails(b: BookingRow, opts: { notifyAdmin?: boolean } = {}) {
   const { notifyAdmin = true } = opts;
   const eb = toEmailBooking(b);
-  const s = emailSite(b.id, eb.cottageName);
+  const s = emailSite(b.id, b.cottage_slug);
   await Promise.allSettled([
     b.email
       ? send({

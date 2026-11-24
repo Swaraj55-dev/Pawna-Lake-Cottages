@@ -113,7 +113,7 @@ Severities are assigned in Stage 3, not here.
 ### Extra findings outside the checklist
 | # | Finding | Status | Evidence |
 |---|---|---|---|
-| X1 | **Zero-advance configuration creates confirmed bookings without payment.** If `advancePercent` is ever set to `0` (or a price override makes the advance ₹0), anyone can create *confirmed* bookings and trigger emails with no payment and only the IP rate limit in the way. | **Possible risk** (config-gated; currently `advancePercent: 50`) | `bookings/route.ts:48,64,70` |
+| X1 | **Zero-advance configuration creates confirmed bookings without payment.** If `advancePercent` is ever set to `0` (or a price override makes the advance ₹0), anyone can create *confirmed* bookings and trigger emails with no payment and only the IP rate limit in the way. | **Possible risk** (config-gated; Aroma 30%, Bella 50%) | `bookings/route.ts:48,64,70` |
 | X2 | Admin session cookie lives **400 days** (library default). | **Possible risk** (low) | see D5 |
 | X3 | `price_overrides` and `cottage_types` are publicly readable via the anon key (by design); `get_availability` is callable directly by anyone who has the anon key. Acceptable, but documented. | **Not an issue** | `init.sql:285,298,304` |
 

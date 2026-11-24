@@ -45,22 +45,27 @@ export default function PoliciesPage() {
         </nav>
 
         <Section id="cancellation" title="Cancellation policy">
-          {policies.cancellation ? (
-            policies.cancellation.split(/\n{2,}/).map((p, i) => <p key={i}>{p}</p>)
-          ) : (
-            <p>
-              Our cancellation policy will be published here shortly. Before booking, please{" "}
-              <Link href="/contact" className="font-semibold text-lake underline underline-offset-4">contact us</Link> and we&apos;ll
-              confirm the terms that apply to your dates.
-            </p>
-          )}
+          {cottages.map((c) => (
+            <div key={c.slug} className="space-y-3">
+              <h3 className="text-xl font-semibold text-ink">{c.name}</h3>
+              {c.cancellationPolicy ? (
+                c.cancellationPolicy.split(/\n{2,}/).map((p, i) => <p key={i}>{p}</p>)
+              ) : (
+                <p>
+                  Please{" "}
+                  <Link href="/contact" className="font-semibold text-lake underline underline-offset-4">contact us</Link> to confirm
+                  the cancellation terms for {c.name} before booking.
+                </p>
+              )}
+            </div>
+          ))}
         </Section>
 
         <Section id="terms" title="Booking terms">
           <ul className="space-y-2">
             <li>
-              Online bookings are confirmed once the <strong>{site.advancePercent}% advance</strong> is paid. The balance is payable at
-              check-in.
+              Online bookings are confirmed once the cottage-specific advance is paid. The balance is payable at check-in:{" "}
+              {cottages.map((c) => `${c.name} — ${c.advancePercent}%`).join("; ")}.
             </li>
             <li>
               While you complete payment, your cottage is held for {site.holdMinutes} minutes. If payment isn&apos;t completed in that time,
@@ -72,18 +77,26 @@ export default function PoliciesPage() {
             <li>
               Maximum occupancy: {cottages.map((c) => `${c.name} — ${c.maxGuests} guests per cottage`).join("; ")}.
             </li>
+            <li>
+              Guest ages are counted on check-in. Guests aged 11 and above pay the adult rate; children aged 5–10 pay half the adult rate, rounded to the nearest rupee; children under 5 are free. All children count toward the cottage occupancy limit, and at least one adult is required per cottage.
+            </li>
             <li>The price you pay is the one shown before payment, calculated for your exact dates, guests and cottages.</li>
             {policies.checkInNote && <li>{policies.checkInNote}</li>}
-            {policies.rules.map((r) => (
-              <li key={r}>{r}</li>
+            {cottages.filter((c) => c.houseRules?.length).map((c) => (
+              <li key={c.slug}>
+                <strong>{c.name} house rules:</strong>
+                <ul className="mt-2 space-y-1">
+                  {c.houseRules?.map((rule) => <li key={rule}>{rule}</li>)}
+                </ul>
+              </li>
             ))}
           </ul>
         </Section>
 
         <Section id="privacy" title="Privacy policy">
           <p>
-            <strong>What we collect.</strong> When you book or contact us we collect your name, phone number, email, stay dates, number of
-            guests, food preference and any requests you share. We use this only to manage your booking, contact you about your stay and send
+            <strong>What we collect.</strong> When you book or contact us we collect your name, phone number, optional email, stay dates, number of
+            guest age groups, food preference counts and any requests you share. We use this only to manage your booking, contact you about your stay and send
             your confirmation.
           </p>
           <p>
@@ -92,7 +105,8 @@ export default function PoliciesPage() {
           </p>
           <p>
             <strong>Service providers.</strong> Booking data is stored securely with Supabase (our database), confirmation emails are sent via
-            Resend, and the website is hosted on Vercel. They process data only to provide these services to us.
+            Resend, the website is hosted on Vercel, and the location map is provided by Google Maps. These providers process data to provide
+            their services; Google Maps may receive your device and connection information when the embedded map loads.
           </p>
           <p>
             <strong>Cookies & storage.</strong> We don&apos;t use advertising or tracking cookies. While you book, your choices are kept in

@@ -7,7 +7,7 @@ import type { BookCottage } from "@/components/booking/types";
 
 export const metadata: Metadata = {
   title: "Book your Pawna Lake cottage",
-  description: `Check live availability and book the Aroma or Bella cottage at ${site.name}, Pawna Lake — pay ${site.advancePercent}% now, the rest at check-in.`,
+  description: `Check live availability and book the Aroma or Bella cottage at ${site.name}, Pawna Lake. The cottage-specific advance is shown before payment.`,
   alternates: { canonical: "/book" },
 };
 

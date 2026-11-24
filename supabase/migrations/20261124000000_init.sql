@@ -326,11 +326,12 @@ create policy "admin_emails admin read" on public.admin_emails for select to aut
   using (public.is_admin());
 
 -- ---------------------------------------------------------------- seed
--- Defaults matching src/config/site.ts. Re-sync after editing site.ts with
--- `npm run db:sync-cottages`.
-insert into public.cottage_types (slug, name, units_available, max_guests, base_guests)
-values ('aroma', 'Aroma Cottage', 5, 4, 2),
-       ('bella', 'Bella Cottage', 5, 4, 2)
+-- Defaults for a fresh database. Re-sync existing databases after editing
+-- src/config/site.ts with `npm run db:sync-cottages`.
+insert into public.cottage_types
+  (slug, name, units_available, max_guests, base_guests, weekday_price, weekend_price, extra_person_price)
+values ('aroma', 'Aroma Cottage', 20, 2, 2, 1299, 1299, null),
+       ('bella', 'Bella Cottage', 5, 4, 2, null, null, null)
 on conflict (slug) do nothing;
 
 -- ---------------------------------------------------------------- optional cron

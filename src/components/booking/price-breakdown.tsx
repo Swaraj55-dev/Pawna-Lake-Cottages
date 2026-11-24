@@ -5,17 +5,26 @@ const kindLabel = { weekday: "Weekday", weekend: "Weekend", override: "Special-d
 
 export function PriceBreakdown({ quote, showPayment = true }: { quote: Quote; showPayment?: boolean }) {
   const groups = summarizeNights(quote);
-  const extra = quote.nights[0]?.extraGuests ?? 0;
-  const regular = quote.nights[0]?.regularGuests ?? quote.guests;
   return (
     <div className="space-y-3 text-sm">
+      <div className="rounded-xl bg-muted/60 px-3 py-2 text-muted-foreground">
+        <p>
+          {quote.party.adults} adult{quote.party.adults === 1 ? "" : "s"} (11+) at full rate
+          {quote.party.childrenHalf > 0 &&
+            ` · ${quote.party.childrenHalf} child${quote.party.childrenHalf === 1 ? "" : "ren"} (5–10) at half rate`}
+          {quote.party.childrenFree > 0 &&
+            ` · ${quote.party.childrenFree} child${quote.party.childrenFree === 1 ? "" : "ren"} under 5 free`}
+        </p>
+        <p className="mt-1 text-xs">Every guest, including children, counts toward cottage capacity.</p>
+      </div>
       <dl className="space-y-2">
         {groups.map((g) => (
           <div key={`${g.kind}-${g.ratePerPerson}`} className="flex justify-between gap-4">
             <dt className="text-muted-foreground">
-              {kindLabel[g.kind]} · {g.count} night{g.count > 1 ? "s" : ""} × {formatINR(g.ratePerPerson)} × {regular}{" "}
-              guest{regular > 1 ? "s" : ""}
-              {extra > 0 && ` + ${extra} extra × ${formatINR(quote.nights[0].extraRate)}`}
+              {kindLabel[g.kind]} · {g.count} night{g.count > 1 ? "s" : ""}
+              <span className="block text-xs">
+                Adult {formatINR(g.ratePerPerson)} · child (5–10) {formatINR(Math.round(g.ratePerPerson / 2))}
+              </span>
             </dt>
             <dd className="shrink-0 tabular-nums">{formatINR(g.amount)}</dd>
           </div>

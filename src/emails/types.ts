@@ -11,7 +11,8 @@ export type EmailBooking = {
   name: string;
   phone: string;
   email: string | null;
-  foodPref: string | null;
+  partySummary: string;
+  foodSummary: string | null;
   notes: string | null;
   total: string; // formatted INR
   paid: string;

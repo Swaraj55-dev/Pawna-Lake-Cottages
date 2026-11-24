@@ -1,19 +1,25 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo } from "react";
+import { Minus, Plus } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
-import { guestDetailsSchema, type GuestDetails, type GuestDetailsInput } from "@/lib/validation";
+import {
+  guestDetailsSchemaForGuests,
+  type GuestDetails,
+  type GuestDetailsInput,
+} from "@/lib/validation";
 
 export const DETAILS_FORM_ID = "guest-details";
 
 const FOOD = [
-  { value: "veg", label: "Veg" },
-  { value: "non_veg", label: "Non-veg" },
+  { value: "veg", label: "Vegetarian" },
+  { value: "nonVeg", label: "Non-vegetarian" },
   { value: "jain", label: "Jain" },
 ] as const;
 
@@ -53,10 +59,12 @@ function Field({
 const inputCls = "h-12 rounded-xl bg-card px-4 text-base";
 
 export function StepDetails({
+  guestCount,
   defaultValues,
   onValid,
   onChange,
 }: {
+  guestCount: number;
   defaultValues: Partial<GuestDetailsInput> | null;
   onValid: (values: GuestDetailsInput, parsed: GuestDetails) => void;
   onChange?: (values: Partial<GuestDetailsInput>) => void;
@@ -68,8 +76,16 @@ export function StepDetails({
     getValues,
     formState: { errors },
   } = useForm<GuestDetailsInput, unknown, GuestDetails>({
-    resolver: zodResolver(guestDetailsSchema),
-    defaultValues: { name: "", phone: "", email: "", notes: "", ...defaultValues, agree: defaultValues?.agree ?? undefined },
+    resolver: zodResolver(useMemo(() => guestDetailsSchemaForGuests(guestCount), [guestCount])),
+    defaultValues: {
+      name: "",
+      phone: "",
+      email: "",
+      notes: "",
+      ...defaultValues,
+      foodCounts: defaultValues?.foodCounts ?? { veg: guestCount, nonVeg: 0, jain: 0 },
+      agree: defaultValues?.agree ?? undefined,
+    },
     mode: "onTouched",
   });
 
@@ -129,38 +145,59 @@ export function StepDetails({
 
       <Controller
         control={control}
-        name="foodPref"
-        render={({ field }) => (
-          <fieldset aria-describedby={errors.foodPref ? "foodPref-error" : undefined}>
-            <legend className="mb-1.5 text-sm font-semibold">Food preference</legend>
-            <div role="radiogroup" aria-label="Food preference" className="flex flex-wrap gap-2">
-              {FOOD.map((f) => {
-                const checked = field.value === f.value;
-                return (
-                  <button
-                    key={f.value}
-                    type="button"
-                    role="radio"
-                    aria-checked={checked}
-                    onClick={() => field.onChange(f.value)}
-                    onBlur={field.onBlur}
-                    className={cn(
-                      "inline-flex min-h-11 items-center rounded-full px-5 text-sm font-semibold ring-1 transition-colors",
-                      checked ? "bg-lake text-sand ring-lake" : "bg-card ring-ink/15 hover:bg-muted",
-                    )}
-                  >
-                    {f.label}
-                  </button>
-                );
-              })}
-            </div>
-            {errors.foodPref && (
-              <p id="foodPref-error" className="mt-1.5 text-sm font-medium text-destructive">
-                {errors.foodPref.message}
+        name="foodCounts"
+        render={({ field }) => {
+          const counts = field.value ?? { veg: guestCount, nonVeg: 0, jain: 0 };
+          const selected = counts.veg + counts.nonVeg + counts.jain;
+          return (
+            <fieldset aria-describedby={errors.foodCounts?.message ? "foodCounts-error" : "foodCounts-hint"}>
+              <legend className="mb-1.5 text-sm font-semibold">Food preference by guest</legend>
+              <p id="foodCounts-hint" className="mb-3 text-sm text-muted-foreground">
+                Choose how many guests need each meal type. The total must match your {guestCount} guests.
               </p>
-            )}
-          </fieldset>
-        )}
+              <div className="space-y-2">
+                {FOOD.map(({ value, label }) => (
+                  <div key={value} className="flex items-center justify-between gap-4 rounded-2xl bg-card p-4 ring-1 ring-ink/5">
+                    <span className="font-medium">{label}</span>
+                    <div role="group" aria-label={`${label} guests`} className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => field.onChange({ ...counts, [value]: counts[value] - 1 })}
+                        onBlur={field.onBlur}
+                        disabled={counts[value] <= 0}
+                        aria-label={`Fewer ${label} guests`}
+                        className="inline-flex size-10 items-center justify-center rounded-full ring-1 ring-ink/15 hover:bg-muted disabled:opacity-35"
+                      >
+                        <Minus className="size-4" aria-hidden />
+                      </button>
+                      <output aria-live="polite" className="w-8 text-center text-lg font-semibold tabular-nums">
+                        {counts[value]}
+                      </output>
+                      <button
+                        type="button"
+                        onClick={() => field.onChange({ ...counts, [value]: counts[value] + 1 })}
+                        onBlur={field.onBlur}
+                        disabled={selected >= guestCount}
+                        aria-label={`More ${label} guests`}
+                        className="inline-flex size-10 items-center justify-center rounded-full ring-1 ring-ink/15 hover:bg-muted disabled:opacity-35"
+                      >
+                        <Plus className="size-4" aria-hidden />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-2 text-sm text-muted-foreground" aria-live="polite">
+                {selected} of {guestCount} guests assigned
+              </p>
+              {errors.foodCounts?.message && (
+                <p id="foodCounts-error" className="mt-1.5 text-sm font-medium text-destructive">
+                  {errors.foodCounts.message}
+                </p>
+              )}
+            </fieldset>
+          );
+        }}
       />
 
       <Field id="notes" label="Special requests (optional)" error={errors.notes?.message}>

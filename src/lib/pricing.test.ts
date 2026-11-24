@@ -105,6 +105,24 @@ describe("calculateQuote — guests", () => {
   it("requires at least one guest per cottage", () => {
     expect(() => q({ guests: 1, cottages: 2 })).toThrow(/at least one guest/);
   });
+
+  it("charges half fare for ages 5–10 and rounds odd fares up to the nearest rupee", () => {
+    const r = q({
+      guests: 2,
+      rates: { weekday: 1299, weekend: 1299, extraPerson: null, baseGuests: 2, maxGuests: 2 },
+      party: { adults: 1, childrenHalf: 1, childrenFree: 0 },
+    });
+    expect(r.nights[0]).toMatchObject({ regularAdults: 1, regularHalfChildren: 1, regularFreeChildren: 0, amount: 1949 });
+  });
+
+  it("does not charge for children under five", () => {
+    const r = q({
+      guests: 2,
+      rates: { weekday: 1299, weekend: 1299, extraPerson: null, baseGuests: 2, maxGuests: 2 },
+      party: { adults: 1, childrenHalf: 0, childrenFree: 1 },
+    });
+    expect(r.nights[0]).toMatchObject({ regularAdults: 1, regularFreeChildren: 1, amount: 1299 });
+  });
 });
 
 describe("calculateQuote — price overrides", () => {

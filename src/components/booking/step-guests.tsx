@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { useAvailability } from "./hooks";
 import { unitsLeftFrom } from "./step-dates";
 import type { BookCottage } from "./types";
+import type { GuestBreakdown } from "@/lib/pricing";
 
 function Stepper({
   label,
@@ -89,40 +90,67 @@ export function StepGuests({
   cottage,
   checkIn,
   checkOut,
-  guests,
+  party,
   cottagesCount,
   onChange,
 }: {
   cottage: BookCottage;
   checkIn: ISODate;
   checkOut: ISODate;
-  guests: number;
+  party: GuestBreakdown;
   cottagesCount: number;
-  onChange: (guests: number, cottages: number) => void;
+  onChange: (party: GuestBreakdown, cottages: number) => void;
 }) {
   const { unitsLeft, known } = useUnitsLeft(cottage, checkIn, checkOut);
-  const maxCottages = Math.max(1, unitsLeft);
+  const maxCottages = Math.max(1, Math.min(unitsLeft, party.adults));
+  const guests = party.adults + party.childrenHalf + party.childrenFree;
   const maxGuests = cottage.maxGuests * cottagesCount;
 
   const setCottages = (n: number) => {
     const c = Math.min(Math.max(n, 1), maxCottages);
-    onChange(Math.min(Math.max(guests, c), cottage.maxGuests * c), c);
+    onChange(party, c);
   };
 
   return (
     <div className="space-y-4">
+      <div className="rounded-2xl bg-lake/5 p-4 text-sm text-muted-foreground ring-1 ring-lake/10">
+        <p className="font-semibold text-ink">Guest ages are counted on check-in</p>
+        <p className="mt-1">11+ pay the adult rate; ages 5–10 pay half; children under 5 stay free. Every guest, including children, counts toward cottage capacity. At least one adult is required per cottage.</p>
+        <p className="mt-1">Half-fares round to the nearest rupee (₹650 at Aroma&apos;s ₹1,299 adult rate).</p>
+      </div>
       <Stepper
-        label="Guests"
-        hint={`Up to ${cottage.maxGuests} per cottage`}
+        label="Adults (11+)"
+        hint="Full adult rate · at least one adult per cottage"
         icon={Users}
-        value={guests}
+        value={party.adults}
         min={cottagesCount}
-        max={maxGuests}
-        onChange={(g) => onChange(g, cottagesCount)}
+        max={Math.max(party.adults, maxGuests - party.childrenHalf - party.childrenFree)}
+        onChange={(adults) => onChange({ ...party, adults }, cottagesCount)}
       />
       <Stepper
+        label="Children (5–10)"
+        hint="Half the adult rate"
+        icon={Users}
+        value={party.childrenHalf}
+        min={0}
+        max={Math.max(party.childrenHalf, maxGuests - party.adults - party.childrenFree)}
+        onChange={(childrenHalf) => onChange({ ...party, childrenHalf }, cottagesCount)}
+      />
+      <Stepper
+        label="Children (under 5)"
+        hint="Free · still counts toward capacity"
+        icon={Users}
+        value={party.childrenFree}
+        min={0}
+        max={Math.max(party.childrenFree, maxGuests - party.adults - party.childrenHalf)}
+        onChange={(childrenFree) => onChange({ ...party, childrenFree }, cottagesCount)}
+      />
+      <p className="px-1 text-sm font-medium text-muted-foreground" aria-live="polite">
+        {guests} guest{guests === 1 ? "" : "s"} total
+      </p>
+      <Stepper
         label="Cottages"
-        hint={known ? `${unitsLeft} ${cottage.name}${unitsLeft === 1 ? "" : "s"} left for your dates` : undefined}
+        hint={known ? `${unitsLeft} ${cottage.name}${unitsLeft === 1 ? "" : "s"} left for your dates · one adult per cottage` : "One adult is required per cottage"}
         icon={BedDouble}
         value={cottagesCount}
         min={1}

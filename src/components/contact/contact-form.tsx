@@ -58,13 +58,13 @@ export function ContactForm() {
           {err("name")}
         </div>
         <div className="space-y-1.5">
-          <label htmlFor="c-phone" className="text-sm font-semibold">Phone (optional)</label>
-          <Input id="c-phone" type="tel" autoComplete="tel" className={cls} {...a11y("phone")} {...register("phone")} />
+          <label htmlFor="c-phone" className="text-sm font-semibold">Phone (required)</label>
+          <Input id="c-phone" type="tel" autoComplete="tel" required className={cls} {...a11y("phone")} {...register("phone")} />
           {err("phone")}
         </div>
       </div>
       <div className="space-y-1.5">
-        <label htmlFor="c-email" className="text-sm font-semibold">Email</label>
+        <label htmlFor="c-email" className="text-sm font-semibold">Email (optional)</label>
         <Input id="c-email" type="email" autoComplete="email" className={cls} {...a11y("email")} {...register("email")} />
         {err("email")}
       </div>

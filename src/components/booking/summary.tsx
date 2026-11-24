@@ -78,8 +78,13 @@ export function SummaryCard({
           </div>
           <div className="flex justify-between gap-3">
             <dt className="text-muted-foreground">Guests</dt>
-            <dd className="font-medium">
-              {draft.guests} · {draft.cottages} cottage{draft.cottages > 1 ? "s" : ""}
+            <dd className="text-right font-medium">
+              <span className="block">{draft.guests} · {draft.cottages} cottage{draft.cottages > 1 ? "s" : ""}</span>
+              <span className="block text-xs font-normal text-muted-foreground">
+                {draft.party.adults} adult{draft.party.adults === 1 ? "" : "s"}
+                {draft.party.childrenHalf > 0 && ` · ${draft.party.childrenHalf} child${draft.party.childrenHalf === 1 ? "" : "ren"} (5–10)`}
+                {draft.party.childrenFree > 0 && ` · ${draft.party.childrenFree} under 5`}
+              </span>
             </dd>
           </div>
         </dl>

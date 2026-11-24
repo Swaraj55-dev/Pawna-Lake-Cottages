@@ -9,8 +9,8 @@ import { useEnquiry } from "./enquiry-store";
 
 /**
  * Floating WhatsApp (prefilled with the current cottage/dates/guests) and
- * click-to-call buttons on every public page. Sits above any mobile bottom bar
- * via the --bottom-bar-h CSS variable.
+ * click-to-call buttons on public pages without their own booking actions.
+ * Sits above any mobile bottom bar via the --bottom-bar-h CSS variable.
  */
 export function FloatingContact() {
   const pathname = usePathname();
@@ -18,6 +18,7 @@ export function FloatingContact() {
   const wa = whatsappLink(enquiry);
 
   if (pathname.startsWith("/admin")) return null;
+  if (pathname === "/book") return null;
   if (!wa && !site.phone) return null;
 
   return (

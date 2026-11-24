@@ -11,7 +11,11 @@ import { PriceBreakdown } from "./price-breakdown";
 import { WhatsAppFallback } from "./whatsapp-fallback";
 import type { BookCottage, Draft } from "./types";
 
-const FOOD_LABEL = { veg: "Veg", non_veg: "Non-veg", jain: "Jain" } as const;
+const FOOD_LABELS = [
+  ["veg", "Veg"],
+  ["nonVeg", "Non-veg"],
+  ["jain", "Jain"],
+] as const;
 
 function Row({ label, value, onEdit }: { label: string; value: React.ReactNode; onEdit: () => void }) {
   return (
@@ -71,7 +75,7 @@ export function StepReview({
         />
         <Row
           label="Guests"
-          value={`${draft.guests} guest${draft.guests > 1 ? "s" : ""} · ${draft.cottages} cottage${draft.cottages > 1 ? "s" : ""}`}
+          value={`${draft.party.adults} adult${draft.party.adults === 1 ? "" : "s"}${draft.party.childrenHalf ? ` · ${draft.party.childrenHalf} child${draft.party.childrenHalf === 1 ? "" : "ren"} (5–10)` : ""}${draft.party.childrenFree ? ` · ${draft.party.childrenFree} child${draft.party.childrenFree === 1 ? "" : "ren"} under 5` : ""} · ${draft.cottages} cottage${draft.cottages > 1 ? "s" : ""}`}
           onEdit={() => onEdit(2)}
         />
         <Row
@@ -81,7 +85,9 @@ export function StepReview({
               {d.name}
               <span className="block text-sm font-normal text-muted-foreground">
                 {d.phone} · {d.email}
-                {d.foodPref && ` · ${FOOD_LABEL[d.foodPref]}`}
+                <span className="block">
+                  Food: {FOOD_LABELS.filter(([key]) => d.foodCounts[key] > 0).map(([key, label]) => `${d.foodCounts[key]} ${label}`).join(", ")}
+                </span>
               </span>
               {d.notes && <span className="block text-sm font-normal text-muted-foreground">“{d.notes}”</span>}
             </>

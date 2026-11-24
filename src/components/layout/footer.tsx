@@ -1,22 +1,25 @@
 import Link from "next/link";
 import { Mail, MapPin, Phone } from "lucide-react";
 import { cottages, site } from "@/config/site";
+import { whatsappLink } from "@/lib/whatsapp";
 import {
   FacebookIcon,
   GoogleIcon,
   InstagramIcon,
   YoutubeIcon,
+  WhatsAppIcon,
 } from "@/components/ui/social-icons";
 import { CopyrightYear } from "./copyright-year";
 
 const socialLinks = [
-  { key: "instagram", label: "Instagram", Icon: InstagramIcon, href: site.socials.instagram },
   { key: "facebook", label: "Facebook", Icon: FacebookIcon, href: site.socials.facebook },
   { key: "youtube", label: "YouTube", Icon: YoutubeIcon, href: site.socials.youtube },
   { key: "google", label: "Google reviews", Icon: GoogleIcon, href: site.socials.googleReviews },
 ].filter((s) => s.href);
 
 export function Footer() {
+  const wa = whatsappLink();
+
   return (
     <footer className="bg-lake-deep text-sand">
       <div className="container-page grid gap-10 py-14 sm:grid-cols-2 lg:grid-cols-4">
@@ -71,6 +74,21 @@ export function Footer() {
             {site.email && (
               <a href={`mailto:${site.email}`} className="flex min-h-11 items-center gap-2 hover:text-sunset">
                 <Mail className="size-4" aria-hidden /> {site.email}
+              </a>
+            )}
+            {wa && (
+              <a href={wa} target="_blank" rel="noopener noreferrer" className="flex min-h-11 items-center gap-2 hover:text-sunset">
+                <WhatsAppIcon className="size-4" /> WhatsApp booking
+              </a>
+            )}
+            {site.socials.instagram && (
+              <a
+                href={site.socials.instagram}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex min-h-11 items-center gap-2 hover:text-sunset"
+              >
+                <InstagramIcon className="size-4" /> Instagram
               </a>
             )}
             <Link href="/contact" className="inline-flex min-h-11 items-center underline underline-offset-4 hover:text-sunset">

@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { AlertTriangle, Download, Loader2, Search } from "lucide-react";
 import { getCottage } from "@/config/site";
 import { requireAdmin } from "@/lib/admin-auth";
+import { formatFoodCounts, formatGuestParty } from "@/lib/booking-details";
 import { bookingStats, PAGE_SIZE, parseFilters, queryBookings, type BookingFilters } from "@/lib/admin/bookings";
 import { isoToDate } from "@/lib/dates";
 import { formatINR } from "@/lib/format";
@@ -14,7 +15,6 @@ import { StatusControl } from "@/components/admin/status-control";
 export const metadata: Metadata = { title: "Bookings" };
 
 const d = (iso: string) => format(isoToDate(iso), "d MMM");
-const FOOD = { veg: "Veg", non_veg: "Non-veg", jain: "Jain" } as const;
 
 function qs(f: BookingFilters, patch: Partial<BookingFilters> = {}) {
   const p = new URLSearchParams();
@@ -171,8 +171,9 @@ async function Bookings({ searchParams }: { searchParams: Promise<Record<string,
                       {d(b.check_in)} → {d(b.check_out)} <span className="text-muted-foreground">· {b.nights}N</span>
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {b.guests} guests{b.food_pref && ` · ${FOOD[b.food_pref]}`}
+                      {b.guests} guests · {formatGuestParty(b)}
                     </p>
+                    <p className="text-xs text-muted-foreground">{formatFoodCounts(b)}</p>
                   </td>
                   <td className="px-4 py-3 text-right align-top tabular-nums">
                     <p className="font-semibold">{formatINR(b.total_amount)}</p>

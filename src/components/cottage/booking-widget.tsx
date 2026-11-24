@@ -41,7 +41,7 @@ export function BookingWidget({ c }: { c: Cottage }) {
         <CalendarCheck className="size-5" aria-hidden /> Check availability
       </Link>
       <p className="text-center text-sm text-muted-foreground">
-        Pay {site.advancePercent}% now to confirm, the rest at check-in.
+        Pay {c.advancePercent}% now to confirm, the rest at check-in.
       </p>
       {(wa || site.phone) && (
         <div className="flex gap-2 border-t border-ink/10 pt-5">

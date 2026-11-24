@@ -21,7 +21,7 @@ export default async function GalleryPage() {
         <SectionHeading
           eyebrow="Gallery"
           title="Life at the lake"
-          intro="Cottages, the water, food, campfires and starry nights at Pawna Lake."
+          intro="Cottages, lake views and moments from stays at Pawna Lake."
         />
         {images.length > 0 ? (
           <GalleryBrowser

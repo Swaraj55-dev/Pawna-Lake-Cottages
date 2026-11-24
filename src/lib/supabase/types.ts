@@ -19,6 +19,12 @@ export type BookingRow = {
   phone: string;
   email: string | null;
   food_pref: FoodPref | null;
+  adult_count: number;
+  child_half_count: number;
+  child_free_count: number;
+  food_veg_count: number;
+  food_non_veg_count: number;
+  food_jain_count: number;
   notes: string | null;
   total_amount: number;
   advance_amount: number;
@@ -33,6 +39,18 @@ export type BookingRow = {
   confirmed_at: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type GuestReviewStatus = "pending" | "approved" | "rejected";
+
+export type GuestReviewRow = {
+  id: string;
+  name: string;
+  cottage_slug: CottageSlug;
+  rating: number;
+  review: string;
+  status: GuestReviewStatus;
+  created_at: string;
 };
 
 export type AvailabilityRow = {

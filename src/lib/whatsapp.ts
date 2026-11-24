@@ -26,7 +26,7 @@ export function whatsappMessage(e: WhatsAppEnquiry = {}): string {
   if (e.guests) lines.push(`Guests: ${e.guests}`);
   if (e.cottages && e.cottages > 1) lines.push(`Cottages: ${e.cottages}`);
   if (e.name) lines.push(`Name: ${e.name}`);
-  lines.push("Is this available?");
+  lines.push("Please share availability, pricing, and other booking details.");
   return lines.join("\n");
 }
 

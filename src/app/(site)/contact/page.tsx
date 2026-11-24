@@ -3,7 +3,7 @@ import { Mail, MapPin, Navigation, Phone } from "lucide-react";
 import { site } from "@/config/site";
 import { directionsUrl } from "@/lib/links";
 import { whatsappLink } from "@/lib/whatsapp";
-import { WhatsAppIcon } from "@/components/ui/social-icons";
+import { InstagramIcon, WhatsAppIcon } from "@/components/ui/social-icons";
 import { ContactForm } from "@/components/contact/contact-form";
 import { PageHeader } from "@/components/sections/page-header";
 
@@ -16,7 +16,8 @@ export const metadata: Metadata = {
 export default function ContactPage() {
   const wa = whatsappLink();
   const quick = [
-    wa && { href: wa, label: "WhatsApp", value: "Fastest reply", Icon: WhatsAppIcon, external: true },
+    wa && { href: wa, label: "WhatsApp", value: "Booking, availability & details", Icon: WhatsAppIcon, external: true },
+    site.socials.instagram && { href: site.socials.instagram, label: "Instagram", value: "Photos and cottage updates", Icon: InstagramIcon, external: true },
     site.phone && { href: `tel:${site.phone}`, label: "Call", value: site.phone, Icon: Phone, external: false },
     site.email && { href: `mailto:${site.email}`, label: "Email", value: site.email, Icon: Mail, external: false },
     { href: directionsUrl(), label: "Directions", value: "Open in Google Maps", Icon: Navigation, external: true },

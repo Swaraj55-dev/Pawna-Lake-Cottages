@@ -39,7 +39,7 @@ export async function POST(request: Request) {
       throw new AppError("NOT_CONFIGURED", "Online payment isn't set up yet. Please book on WhatsApp or call us.", 503);
     }
 
-    const { quote, available, unitsLeft } = await getServerQuote(stay);
+    const { quote, cottage, available, unitsLeft } = await getServerQuote(stay);
     if (!available) {
       throw new AppError(
         "NOT_AVAILABLE",
@@ -52,6 +52,14 @@ export async function POST(request: Request) {
 
     const db = getServiceClient();
     const payNothing = quote.advance === 0;
+    const foodPref =
+      details.foodCounts.veg === stay.guests
+        ? "veg"
+        : details.foodCounts.nonVeg === stay.guests
+          ? "non_veg"
+          : details.foodCounts.jain === stay.guests
+            ? "jain"
+            : null;
     const { data, error } = await db.rpc("create_booking", {
       p_slug: stay.type,
       p_check_in: stay.checkIn,
@@ -61,7 +69,7 @@ export async function POST(request: Request) {
       p_name: details.name,
       p_phone: details.phone,
       p_email: details.email,
-      p_food_pref: details.foodPref,
+      p_food_pref: foodPref,
       p_notes: details.notes || null,
       p_total: quote.total,
       p_advance: quote.advance,
@@ -72,6 +80,12 @@ export async function POST(request: Request) {
       // SEC-01: hold limits per phone / hashed IP (raw IP never stored)
       p_client_ip_hash: hashClientIp(clientIp(request)),
       p_replace_booking_id: replaceBookingId ?? null,
+      p_adults: stay.party.adults,
+      p_children_half: stay.party.childrenHalf,
+      p_children_free: stay.party.childrenFree,
+      p_food_veg: details.foodCounts.veg,
+      p_food_non_veg: details.foodCounts.nonVeg,
+      p_food_jain: details.foodCounts.jain,
     });
     if (error) {
       const known = Object.keys(SQL_ERRORS).find((k) => error.message.includes(k));
@@ -119,7 +133,7 @@ export async function POST(request: Request) {
           amount: order.amount,
           currency: order.currency,
           prefill: { name: details.name, email: details.email, contact: `+91${details.phone}` },
-          description: `${booking.booking_code} · advance ${site.advancePercent}%`,
+          description: `${booking.booking_code} · advance ${cottage.advancePercent}%`,
         },
       },
       { status: 201, headers: noStore },

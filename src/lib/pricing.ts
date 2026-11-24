@@ -16,6 +16,12 @@
  */
 import { dayOfWeek, diffDays, eachNight, isISODate, type ISODate } from "./dates";
 
+export type GuestBreakdown = {
+  adults: number;
+  childrenHalf: number;
+  childrenFree: number;
+};
+
 export type Rates = {
   weekday: number;
   weekend: number;
@@ -29,6 +35,7 @@ export type PricingInput = {
   checkIn: ISODate;
   checkOut: ISODate;
   guests: number;
+  party?: GuestBreakdown;
   cottages: number;
   rates: Rates;
   /** ISO date -> per-person price for that night */
@@ -47,6 +54,12 @@ export type NightPrice = {
   ratePerPerson: number;
   regularGuests: number;
   extraGuests: number;
+  regularAdults: number;
+  regularHalfChildren: number;
+  regularFreeChildren: number;
+  extraAdults: number;
+  extraHalfChildren: number;
+  extraFreeChildren: number;
   extraRate: number;
   amount: number;
 };
@@ -56,6 +69,7 @@ export type Quote = {
   checkOut: ISODate;
   nightsCount: number;
   guests: number;
+  party: GuestBreakdown;
   cottages: number;
   nights: NightPrice[];
   subtotal: number;
@@ -94,22 +108,47 @@ export function priceNight(
   rates: Rates,
   overrides: Record<ISODate, number>,
   weekendNights: number[],
+  party: GuestBreakdown = { adults: guests, childrenHalf: 0, childrenFree: 0 },
 ): NightPrice {
   const override = overrides[date];
   const isWeekend = weekendNights.includes(dayOfWeek(date));
   const kind: NightPrice["kind"] = override !== undefined ? "override" : isWeekend ? "weekend" : "weekday";
   const ratePerPerson = override ?? (isWeekend ? rates.weekend : rates.weekday);
-  const regularGuests = Math.min(guests, rates.baseGuests * cottages);
-  const extraGuests = guests - regularGuests;
+  const regularCapacity = Math.min(guests, rates.baseGuests * cottages);
+  const regularAdults = Math.min(party.adults, regularCapacity);
+  const remainingForRegularChildren = regularCapacity - regularAdults;
+  const regularHalfChildren = Math.min(party.childrenHalf, remainingForRegularChildren);
+  const regularFreeChildren = Math.min(
+    party.childrenFree,
+    remainingForRegularChildren - regularHalfChildren,
+  );
+  const regularGuests = regularAdults + regularHalfChildren + regularFreeChildren;
+  const extraAdults = party.adults - regularAdults;
+  const extraHalfChildren = party.childrenHalf - regularHalfChildren;
+  const extraFreeChildren = party.childrenFree - regularFreeChildren;
+  const extraGuests = extraAdults + extraHalfChildren + extraFreeChildren;
   const extraRate = rates.extraPerson ?? ratePerPerson;
+  const regularHalfRate = Math.round(ratePerPerson / 2);
+  const extraHalfRate = Math.round(extraRate / 2);
+  const amount =
+    regularAdults * ratePerPerson +
+    regularHalfChildren * regularHalfRate +
+    extraAdults * extraRate +
+    extraHalfChildren * extraHalfRate;
   return {
     date,
     kind,
     ratePerPerson,
     regularGuests,
     extraGuests,
+    regularAdults,
+    regularHalfChildren,
+    regularFreeChildren,
+    extraAdults,
+    extraHalfChildren,
+    extraFreeChildren,
     extraRate,
-    amount: regularGuests * ratePerPerson + extraGuests * extraRate,
+    amount,
   };
 }
 
@@ -118,6 +157,7 @@ export function calculateQuote(input: PricingInput): Quote {
     checkIn,
     checkOut,
     guests,
+    party = { adults: guests, childrenHalf: 0, childrenFree: 0 },
     cottages,
     rates,
     overrides = {},
@@ -140,6 +180,13 @@ export function calculateQuote(input: PricingInput): Quote {
   if (!Number.isInteger(guests) || guests < cottages) {
     throw new PricingError("INVALID_GUESTS", "Each cottage needs at least one guest.");
   }
+  if (
+    ![party.adults, party.childrenHalf, party.childrenFree].every((count) => Number.isInteger(count) && count >= 0) ||
+    party.adults < cottages ||
+    party.adults + party.childrenHalf + party.childrenFree !== guests
+  ) {
+    throw new PricingError("INVALID_GUESTS", "Guest ages must add up to the total, with one adult per cottage.");
+  }
   if (guests > rates.maxGuests * cottages) {
     throw new PricingError(
       "TOO_MANY_GUESTS",
@@ -147,7 +194,14 @@ export function calculateQuote(input: PricingInput): Quote {
     );
   }
   const rateValues = [rates.weekday, rates.weekend, convenienceFee, ...(rates.extraPerson === null ? [] : [rates.extraPerson])];
-  if (!rateValues.every(isWholeNonNeg) || !Object.values(overrides).every(isWholeNonNeg) || rates.baseGuests < 1) {
+  if (
+    !rateValues.every(isWholeNonNeg) ||
+    !Object.values(overrides).every(isWholeNonNeg) ||
+    !Number.isInteger(rates.baseGuests) ||
+    rates.baseGuests < 1 ||
+    !Number.isInteger(rates.maxGuests) ||
+    rates.maxGuests < 1
+  ) {
     throw new PricingError("INVALID_RATES", "Rates must be whole, non-negative rupee amounts.");
   }
   if (advancePercent < 0 || advancePercent > 100) {
@@ -155,7 +209,7 @@ export function calculateQuote(input: PricingInput): Quote {
   }
 
   const nights = eachNight(checkIn, checkOut).map((d) =>
-    priceNight(d, guests, cottages, rates, overrides, weekendNights),
+    priceNight(d, guests, cottages, rates, overrides, weekendNights, party),
   );
   const subtotal = nights.reduce((s, n) => s + n.amount, 0);
   const total = subtotal + convenienceFee;
@@ -166,6 +220,7 @@ export function calculateQuote(input: PricingInput): Quote {
     checkOut,
     nightsCount,
     guests,
+    party,
     cottages,
     nights,
     subtotal,

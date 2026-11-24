@@ -19,7 +19,7 @@ export async function fetchOverrides(slug: string, checkIn: string, checkOut: st
 }
 
 export type ServerQuote = {
-  cottage: Pick<Cottage, "slug" | "name" | "maxGuests" | "baseGuests">;
+  cottage: Pick<Cottage, "slug" | "name" | "maxGuests" | "baseGuests" | "advancePercent">;
   quote: Quote;
   unitsLeft: number;
   available: boolean;
@@ -51,6 +51,7 @@ export async function getServerQuote(req: StayRequest): Promise<ServerQuote> {
     checkIn: req.checkIn,
     checkOut: req.checkOut,
     guests: req.guests,
+    party: req.party,
     cottages: req.cottages,
     rates: {
       weekday,
@@ -62,14 +63,20 @@ export async function getServerQuote(req: StayRequest): Promise<ServerQuote> {
     overrides,
     weekendNights: site.weekendNights,
     convenienceFee: site.convenienceFee,
-    advancePercent: site.advancePercent,
+    advancePercent: cottage.advancePercent,
     maxNights: site.maxNights,
   });
 
   const unitsLeft = await unitsLeftForStay(cottage.slug, req.checkIn, req.checkOut);
 
   return {
-    cottage: { slug: cottage.slug, name: cottage.name, maxGuests: cottage.maxGuests, baseGuests: cottage.baseGuests },
+    cottage: {
+      slug: cottage.slug,
+      name: cottage.name,
+      maxGuests: cottage.maxGuests,
+      baseGuests: cottage.baseGuests,
+      advancePercent: cottage.advancePercent,
+    },
     quote,
     unitsLeft,
     available: unitsLeft >= req.cottages,

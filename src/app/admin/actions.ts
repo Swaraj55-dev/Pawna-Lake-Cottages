@@ -14,7 +14,7 @@ import { sendBookingConfirmedEmails } from "@/lib/email";
 import { getServerQuote } from "@/lib/quote";
 import { getServiceClient, isSupabaseConfigured } from "@/lib/supabase/admin";
 import { createAuthClient } from "@/lib/supabase/server";
-import type { BookingRow, BookingStatus } from "@/lib/supabase/types";
+import type { BookingRow, BookingStatus, GuestReviewStatus } from "@/lib/supabase/types";
 import { cottageSlugSchema, foodPrefSchema, indianPhoneSchema, isoDateSchema } from "@/lib/validation";
 import { STATUSES } from "@/lib/admin/bookings";
 
@@ -99,6 +99,30 @@ export async function updateBookingStatus(input: { id: string; status: BookingSt
   return { ok: true, message: `Marked ${status.replace("_", " ")}.` };
 }
 
+const reviewModerationSchema = z.object({
+  id: z.uuid(),
+  status: z.enum(["approved", "rejected"]),
+});
+
+export async function moderateGuestReview(id: string, status: GuestReviewStatus): Promise<ActionState> {
+  await requireAdmin();
+  const parsed = reviewModerationSchema.safeParse({ id, status });
+  if (!parsed.success) return { ok: false, message: "Invalid review moderation request." };
+
+  const { data, error } = await getServiceClient()
+    .from("guest_reviews")
+    .update({ status: parsed.data.status })
+    .eq("id", parsed.data.id)
+    .eq("status", "pending")
+    .select("id")
+    .maybeSingle();
+  if (error) return { ok: false, message: `Couldn't update the review: ${error.message}` };
+  if (!data) return { ok: false, message: "This review has already been moderated." };
+
+  refresh();
+  return { ok: true, message: `Review ${parsed.data.status}.` };
+}
+
 /* ------------------------------------------------------------------ manual booking */
 
 const manualSchema = z
@@ -108,6 +132,9 @@ const manualSchema = z
     checkOut: isoDateSchema,
     guests: z.coerce.number().int().min(1).max(60),
     cottages: z.coerce.number().int().min(1).max(20),
+    adults: z.coerce.number().int().min(0).max(60),
+    childrenHalf: z.coerce.number().int().min(0).max(60),
+    childrenFree: z.coerce.number().int().min(0).max(60),
     name: z.string().trim().min(2, "Enter the guest's name").max(120),
     phone: indianPhoneSchema,
     email: z.preprocess((v) => (v === "" ? undefined : v), z.email("Invalid email").optional()),
@@ -119,7 +146,23 @@ const manualSchema = z
     sendEmail: z.preprocess((v) => v === "on", z.boolean()),
   })
   .refine((v) => v.checkOut > v.checkIn, { message: "Check-out must be after check-in", path: ["checkOut"] })
-  .refine((v) => diffDays(v.checkIn, v.checkOut) <= 60, { message: "Max 60 nights", path: ["checkOut"] });
+  .refine((v) => diffDays(v.checkIn, v.checkOut) <= 60, { message: "Max 60 nights", path: ["checkOut"] })
+  .superRefine((v, ctx) => {
+    if (v.adults < v.cottages) {
+      ctx.addIssue({
+        code: "custom",
+        message: "At least one adult (11+) is required per cottage.",
+        path: ["adults"],
+      });
+    }
+    if (v.adults + v.childrenHalf + v.childrenFree !== v.guests) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Adult and child counts must add up to the total guests.",
+        path: ["guests"],
+      });
+    }
+  });
 
 export async function createManualBooking(_prev: ActionState, formData: FormData): Promise<ActionState> {
   await requireAdmin();
@@ -135,7 +178,16 @@ export async function createManualBooking(_prev: ActionState, formData: FormData
   let total = v.total;
   if (total === undefined) {
     try {
-      total = (await getServerQuote({ type: v.type, checkIn: v.checkIn, checkOut: v.checkOut, guests: v.guests, cottages: v.cottages })).quote.total;
+          total = (
+            await getServerQuote({
+              type: v.type,
+              checkIn: v.checkIn,
+              checkOut: v.checkOut,
+              guests: v.guests,
+              party: { adults: v.adults, childrenHalf: v.childrenHalf, childrenFree: v.childrenFree },
+              cottages: v.cottages,
+            })
+          ).quote.total;
     } catch {
       return failWith(formData, { fieldErrors: { total: "Enter the agreed total (no standard price is set for these dates)." } });
     }
@@ -160,6 +212,12 @@ export async function createManualBooking(_prev: ActionState, formData: FormData
     p_source: v.source,
     p_status: "confirmed",
     p_hold_minutes: site.holdMinutes,
+    p_adults: v.adults,
+    p_children_half: v.childrenHalf,
+    p_children_free: v.childrenFree,
+    p_food_veg: v.foodPref === "veg" ? v.guests : 0,
+    p_food_non_veg: v.foodPref === "non_veg" ? v.guests : 0,
+    p_food_jain: v.foodPref === "jain" ? v.guests : 0,
   });
   if (error) return failWith(formData, { message: sqlMessage(error.message) });
   const booking = data as BookingRow;
@@ -177,7 +235,14 @@ export async function createManualBooking(_prev: ActionState, formData: FormData
 }
 
 /** Live helper for the manual booking form: units left + standard price. */
-export async function checkStay(input: { type: string; checkIn: string; checkOut: string; guests: number; cottages: number }) {
+export async function checkStay(input: {
+  type: string;
+  checkIn: string;
+  checkOut: string;
+  guests: number;
+  party: { adults: number; childrenHalf: number; childrenFree: number };
+  cottages: number;
+}) {
   await requireAdmin();
   const type = cottageSlugSchema.safeParse(input.type);
   if (!type.success || !isISODate(input.checkIn) || !isISODate(input.checkOut) || input.checkOut <= input.checkIn) {
@@ -189,6 +254,7 @@ export async function checkStay(input: { type: string; checkIn: string; checkOut
     checkIn: input.checkIn,
     checkOut: input.checkOut,
     guests: Math.max(1, input.guests || 1),
+    party: input.party,
     cottages: Math.max(1, input.cottages || 1),
   })
     .then((q) => q.quote.total)

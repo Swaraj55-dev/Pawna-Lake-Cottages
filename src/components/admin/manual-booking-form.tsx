@@ -30,15 +30,22 @@ const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 
 export function ManualBookingForm({ today }: { today: string }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(createManualBooking, { ok: false });
-  const [stay, setStay] = useState({ type: "aroma", checkIn: "", checkOut: "", guests: 2, cottages: 1 });
+  const [stay, setStay] = useState({
+    type: "aroma",
+    checkIn: "",
+    checkOut: "",
+    party: { adults: 2, childrenHalf: 0, childrenFree: 0 },
+    cottages: 1,
+  });
   const [check, setCheck] = useState<{ key: string; unitsLeft: number | null; standardTotal: number | null } | null>(null);
   const key = JSON.stringify(stay);
+  const guests = stay.party.adults + stay.party.childrenHalf + stay.party.childrenFree;
   const ready = stay.checkIn && stay.checkOut && stay.checkOut > stay.checkIn;
 
   useEffect(() => {
     if (!ready) return;
     const t = setTimeout(() => {
-      checkStay(stay).then((r) => setCheck({ key, ...r }));
+      checkStay({ ...stay, guests }).then((r) => setCheck({ key, ...r }));
     }, 350);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -90,8 +97,15 @@ export function ManualBookingForm({ today }: { today: string }) {
           <F label="Check-out" name="checkOut" error={e.checkOut}>
             <input id="checkOut" name="checkOut" type="date" min={stay.checkIn || today} required value={stay.checkOut} onChange={(ev) => setStay({ ...stay, checkOut: ev.target.value })} className={input} {...aria("checkOut")} />
           </F>
-          <F label="Guests" name="guests" error={e.guests}>
-            <input id="guests" name="guests" type="number" min={1} max={60} value={stay.guests} onChange={(ev) => setStay({ ...stay, guests: Number(ev.target.value) })} className={input} {...aria("guests")} />
+          <input type="hidden" name="guests" value={guests} />
+          <F label="Adults (11+)" name="adults" error={e.adults}>
+            <input id="adults" name="adults" type="number" min={stay.cottages} max={60} required value={stay.party.adults} onChange={(ev) => setStay({ ...stay, party: { ...stay.party, adults: Number(ev.target.value) } })} className={input} {...aria("adults")} />
+          </F>
+          <F label="Children (5–10)" name="childrenHalf" error={e.childrenHalf} hint="Half adult rate">
+            <input id="childrenHalf" name="childrenHalf" type="number" min={0} max={60} required value={stay.party.childrenHalf} onChange={(ev) => setStay({ ...stay, party: { ...stay.party, childrenHalf: Number(ev.target.value) } })} className={input} {...aria("childrenHalf")} />
+          </F>
+          <F label="Children (under 5)" name="childrenFree" error={e.childrenFree} hint="Free; still counts toward capacity">
+            <input id="childrenFree" name="childrenFree" type="number" min={0} max={60} required value={stay.party.childrenFree} onChange={(ev) => setStay({ ...stay, party: { ...stay.party, childrenFree: Number(ev.target.value) } })} className={input} {...aria("childrenFree")} />
           </F>
           <F label="Cottages" name="cottages" error={e.cottages}>
             <input id="cottages" name="cottages" type="number" min={1} max={20} value={stay.cottages} onChange={(ev) => setStay({ ...stay, cottages: Number(ev.target.value) })} className={input} {...aria("cottages")} />
@@ -144,6 +158,7 @@ export function ManualBookingForm({ today }: { today: string }) {
             </>
           )}
         </div>
+        {e.guests && <p className="text-sm font-medium text-destructive">{e.guests}</p>}
         <F label="Total agreed (₹)" name="total" error={e.total} hint="Leave blank to use the standard price.">
           <input id="total" name="total" type="number" min={0} inputMode="numeric" placeholder={live?.standardTotal != null ? String(live.standardTotal) : ""} defaultValue={v("total")} className={input} {...aria("total")} />
         </F>

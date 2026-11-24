@@ -133,6 +133,7 @@ export function Navbar() {
                 {navLinks.map((l) => (
                   <li key={l.href}>
                     <SheetClose
+                      nativeButton={false}
                       render={<Link href={l.href} />}
                       className="flex min-h-12 items-center rounded-lg px-3 text-lg text-ink hover:bg-lake/10"
                     >
@@ -143,6 +144,7 @@ export function Navbar() {
               </ul>
               <div className="mt-auto flex flex-col gap-3 p-4">
                 <SheetClose
+                  nativeButton={false}
                   render={<Link href="/book" />}
                   className="flex min-h-12 items-center justify-center rounded-full bg-lake font-semibold text-sand"
                 >

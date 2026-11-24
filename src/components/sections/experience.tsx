@@ -19,7 +19,6 @@ export function Experience() {
           id="experience-title"
           eyebrow="Your stay"
           title="From golden hour to first light"
-          intro="How a typical stay at the lake unfolds."
           align="center"
           tone="dark"
         />

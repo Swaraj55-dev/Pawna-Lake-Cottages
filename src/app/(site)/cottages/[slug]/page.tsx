@@ -3,11 +3,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, BedDouble, Check, Clock, Users } from "lucide-react";
-import { cottages, getCottage, policies, site } from "@/config/site";
+import { cottages, getCottage, site } from "@/config/site";
 import { getImages, getPanorama } from "@/lib/images";
 import { formatINR, fromPrice, weekdayLabel, weekendLabel } from "@/lib/format";
 import { CottageMedia } from "@/components/cottage/cottage-media";
 import { BookingBar, BookingWidget } from "@/components/cottage/booking-widget";
+import { CottageMealPlan } from "@/components/cottage/meal-plan";
 import { Reveal } from "@/components/motion/reveal";
 import { ProvideEnquiry } from "@/components/contact/enquiry-store";
 import { JsonLd } from "@/components/json-ld";
@@ -95,7 +96,7 @@ export default async function CottagePage({ params }: PageProps<"/cottages/[slug
       </header>
 
       <div className="container-page grid gap-12 py-12 lg:grid-cols-[minmax(0,1fr)_360px] lg:py-16">
-        <div>
+        <div className="min-w-0">
           <CottageMedia
             name={c.name}
             panorama={panorama}
@@ -181,12 +182,17 @@ export default async function CottagePage({ params }: PageProps<"/cottages/[slug
                   Prices are shared on request. Check availability for your dates or message us and we&apos;ll get back with a quote.
                 </p>
               )}
+              <p className="mt-4 text-sm text-muted-foreground">
+                Child fares are based on age at check-in: under 5 is free, ages 5–10 pay half the adult rate (rounded to the nearest rupee), and ages 11+ pay the adult rate. Children count toward the cottage&apos;s maximum occupancy.
+              </p>
             </Block>
 
-            {policies.rules.length > 0 && (
+            {c.mealPlan && <CottageMealPlan cottage={c} />}
+
+            {c.houseRules && c.houseRules.length > 0 && (
               <Block title="House rules">
                 <ul className="list-disc space-y-2 pl-5 text-muted-foreground marker:text-sunset">
-                  {policies.rules.map((r) => (
+                  {c.houseRules.map((r) => (
                     <li key={r}>{r}</li>
                   ))}
                 </ul>
@@ -194,8 +200,8 @@ export default async function CottagePage({ params }: PageProps<"/cottages/[slug
             )}
 
             <Block title="Cancellation">
-              <p className="text-muted-foreground">
-                {policies.cancellation || "Please read our cancellation policy before booking."}{" "}
+              <p className="whitespace-pre-line text-muted-foreground">
+                {c.cancellationPolicy || `Please contact us to confirm the cancellation terms for ${c.name}.`}{" "}
                 <Link href="/policies#cancellation" className="font-semibold text-lake underline underline-offset-4">
                   Full policy
                 </Link>
