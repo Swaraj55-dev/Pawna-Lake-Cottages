@@ -34,7 +34,7 @@ export default function BookingConfirmationEmail({ b, site }: { b: EmailBooking;
       <Divider />
       {site.address && <P muted>📍 {site.address}</P>}
       {site.phone && <P muted>📞 {site.phone}</P>}
-      <P muted>Please carry a photo ID for every guest. Share your booking code when you arrive.</P>
+      <P muted>{`${site.checkInNote ? `${site.checkInNote} ` : ""}Share your booking code when you arrive.`}</P>
       {site.cancellationPolicy && (
         <P muted>
           <strong>Cancellation policy:</strong> {site.cancellationPolicy}

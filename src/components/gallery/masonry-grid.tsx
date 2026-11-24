@@ -7,7 +7,8 @@ import { motion, useReducedMotion } from "framer-motion";
 import { Lightbox, type LightboxImage } from "./lightbox";
 
 /** CSS-columns masonry of images; each tile opens the lightbox. */
-export function MasonryGrid({ images }: { images: LightboxImage[] }) {
+/** `eagerCount`: tiles likely above the fold load eagerly (first one with high priority) for LCP. */
+export function MasonryGrid({ images, eagerCount = 0 }: { images: LightboxImage[]; eagerCount?: number }) {
   const [index, setIndex] = useState<number | null>(null);
   const reduce = useReducedMotion();
 
@@ -18,7 +19,8 @@ export function MasonryGrid({ images }: { images: LightboxImage[] }) {
           <motion.li
             key={img.src}
             className="break-inside-avoid"
-            initial={reduce ? false : { opacity: 0, y: 24 }}
+            // above-the-fold tiles render immediately (no fade) so they can be the LCP
+            initial={reduce || i < eagerCount ? false : { opacity: 0, y: 24 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "0px 0px -5% 0px" }}
             transition={{ duration: 0.6, delay: (i % 3) * 0.06 }}
@@ -36,6 +38,8 @@ export function MasonryGrid({ images }: { images: LightboxImage[] }) {
                 height={img.height}
                 sizes="(min-width: 768px) 33vw, 50vw"
                 quality={60}
+                loading={i < eagerCount ? "eager" : "lazy"}
+                fetchPriority={i === 0 && eagerCount > 0 ? "high" : undefined}
                 placeholder={img.blurDataURL ? "blur" : "empty"}
                 blurDataURL={img.blurDataURL}
                 className="h-auto w-full transition-transform duration-700 group-hover:scale-105"

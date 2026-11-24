@@ -70,7 +70,7 @@ export function GalleryBrowser({
       </div>
       <div id="gallery-panel" role="tabpanel" aria-live="polite">
         {/* key resets the grid (and its lightbox index) when the filter changes */}
-        <MasonryGrid key={active} images={shown} />
+        <MasonryGrid key={active} images={shown} eagerCount={active === "all" ? 3 : 0} />
       </div>
     </>
   );

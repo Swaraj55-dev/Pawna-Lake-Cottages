@@ -79,10 +79,15 @@ async function CalendarContent({ searchParams }: { searchParams: Promise<Record<
         </p>
       </div>
 
-      <div className="overflow-x-auto rounded-2xl bg-card p-2 ring-1 ring-ink/5">
-        <div className="grid min-w-[840px] grid-cols-7 gap-1" role="grid" aria-label={`${getCottage(type)?.name} occupancy, ${format(isoToDate(from), "MMMM yyyy")}`}>
+      <div
+        role="region"
+        tabIndex={0}
+        aria-label={`${getCottage(type)?.name} occupancy, ${format(isoToDate(from), "MMMM yyyy")}`}
+        className="overflow-x-auto rounded-2xl bg-card p-2 outline-none ring-1 ring-ink/5 focus-visible:ring-2 focus-visible:ring-sunset"
+      >
+        <div className="grid min-w-[840px] grid-cols-7 gap-1">
           {WEEKDAYS.map((w) => (
-            <div key={w} role="columnheader" className="px-2 py-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <div key={w} aria-hidden className="px-2 py-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               {w}
             </div>
           ))}
@@ -98,16 +103,20 @@ async function CalendarContent({ searchParams }: { searchParams: Promise<Record<
             return (
               <div
                 key={n.night}
-                role="gridcell"
+                data-date={n.night}
                 className={cn(
                   "flex min-h-32 flex-col gap-1 rounded-xl p-2 ring-1",
                   n.available === 0 ? "bg-destructive/5 ring-destructive/20" : "ring-ink/10",
                   n.night === today && "ring-2 ring-sunset",
-                  past && "opacity-55",
+                  past && "bg-muted ring-transparent",
                 )}
               >
                 <div className="flex items-baseline justify-between">
-                  <span className="text-sm font-semibold">{Number(n.night.slice(8))}</span>
+                  <span className="text-sm font-semibold">
+                    <span className="sr-only">{format(isoToDate(n.night), "EEEE")} </span>
+                    {Number(n.night.slice(8))}
+                    {past && <span className="sr-only"> (past)</span>}
+                  </span>
                   <span className={cn("text-xs font-semibold tabular-nums", n.available === 0 ? "text-destructive" : "text-forest")}>
                     {n.available}/{n.units_total} free
                   </span>

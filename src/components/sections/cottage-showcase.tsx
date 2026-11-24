@@ -31,9 +31,9 @@ export async function CottageShowcase() {
       <div className="container-page">
         <SectionHeading
           id="cottages-title"
-          eyebrow="Stay"
+          eyebrow="Pawna Lake cottages"
           title="Two ways to wake up by the lake"
-          intro="Choose between our Aroma and Bella cottages — both a few steps from the shore of Pawna Lake."
+          intro="Choose between our Aroma and Bella cottages — lakeside stays at Pawna Lake, Maval."
         />
         <div className="grid gap-8 md:grid-cols-2">
           {cards.map((c, i) => (

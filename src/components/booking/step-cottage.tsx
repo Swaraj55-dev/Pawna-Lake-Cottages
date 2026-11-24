@@ -39,6 +39,8 @@ export function StepCottage({
                   fill
                   sizes="(min-width: 640px) 33vw, 100vw"
                   quality={60}
+                  loading="eager"
+                  fetchPriority={c === cottages[0] ? "high" : undefined}
                   placeholder={c.image.blurDataURL ? "blur" : "empty"}
                   blurDataURL={c.image.blurDataURL}
                   className="object-cover transition-transform duration-700 group-hover:scale-105"

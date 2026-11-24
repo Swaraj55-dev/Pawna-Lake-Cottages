@@ -38,7 +38,10 @@ function Carousel({ images, name }: { images: LightboxImage[]; name: string }) {
     <div className="relative" role="region" aria-roledescription="carousel" aria-label={`${name} photos`}>
       <div
         ref={track}
-        className="flex aspect-[4/3] snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        // focusable so keyboard users can scroll the photos with arrow keys (WCAG 2.1.1)
+        tabIndex={0}
+        aria-label={`${name} photos — use arrow keys to scroll`}
+        className="flex aspect-[4/3] snap-x snap-mandatory overflow-x-auto outline-none [scrollbar-width:none] focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-sunset [&::-webkit-scrollbar]:hidden"
         onScroll={(e) => {
           const el = e.currentTarget;
           setActive(Math.round(el.scrollLeft / el.clientWidth));

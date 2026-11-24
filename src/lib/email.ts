@@ -6,6 +6,7 @@ import type { BookingRow } from "@/lib/supabase/types";
 import BookingConfirmationEmail from "@/emails/booking-confirmation";
 import AdminNewBookingEmail from "@/emails/admin-new-booking";
 import AdminPaymentIssueEmail from "@/emails/admin-payment-issue";
+import AdminContactEmail from "@/emails/admin-contact";
 import type { EmailBooking, EmailSite } from "@/emails/types";
 import { adminEmails } from "./admin-emails";
 import { isoToDate } from "./dates";
@@ -66,19 +67,37 @@ export function emailSite(bookingId: string, cottageName?: string): EmailSite {
     bookingUrl: siteUrl(`/book/success/${bookingId}`),
     adminUrl: siteUrl("/admin"),
     cancellationPolicy: policies.cancellation,
+    checkInNote: policies.checkInNote,
   };
 }
 
-async function send(opts: { to: string[]; subject: string; react: React.ReactElement; idempotencyKey: string }) {
+async function send(opts: {
+  to: string[];
+  subject: string;
+  react: React.ReactElement;
+  idempotencyKey: string;
+  replyTo?: string;
+}): Promise<boolean> {
   if (!isEmailConfigured() || opts.to.length === 0) {
     console.warn(`[email] skipped "${opts.subject}" — ${!isEmailConfigured() ? "RESEND_API_KEY not set" : "no recipient"}`);
-    return;
+    return false;
   }
   const { error } = await resend().emails.send(
-    { from: fromAddress(), to: opts.to, subject: opts.subject, react: opts.react },
+    { from: fromAddress(), to: opts.to, subject: opts.subject, react: opts.react, replyTo: opts.replyTo },
     { idempotencyKey: opts.idempotencyKey },
   );
   if (error) console.error(`[email] "${opts.subject}" failed:`, error);
+  return !error;
+}
+
+export async function sendContactEmail(m: { id: string; name: string; email: string; phone: string; message: string }) {
+  return send({
+    to: adminEmails(),
+    subject: `Website message from ${m.name}`,
+    react: AdminContactEmail({ brand: site.name, m }),
+    idempotencyKey: `contact/${m.id}`,
+    replyTo: m.email,
+  });
 }
 
 /**

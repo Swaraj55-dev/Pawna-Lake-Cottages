@@ -10,6 +10,8 @@ import { CottageMedia } from "@/components/cottage/cottage-media";
 import { BookingBar, BookingWidget } from "@/components/cottage/booking-widget";
 import { Reveal } from "@/components/motion/reveal";
 import { ProvideEnquiry } from "@/components/contact/enquiry-store";
+import { JsonLd } from "@/components/json-ld";
+import { accommodationLd, breadcrumbLd } from "@/lib/seo";
 
 export function generateStaticParams() {
   return cottages.map((c) => ({ slug: c.slug }));
@@ -19,17 +21,13 @@ export async function generateMetadata({ params }: PageProps<"/cottages/[slug]">
   const { slug } = await params;
   const c = getCottage(slug);
   if (!c) return {};
-  const imgs = await getImages(c.slug);
-  const description = `${c.name} at ${site.name} — a lakeside cottage at Pawna Lake near Pune & Lonavala for up to ${c.maxGuests} guests.`;
+  const description = `${c.name} at ${site.name} — a lakeside cottage at Pawna Lake near Pune & Lonavala for up to ${c.maxGuests} guests. Check availability and book online.`;
+  // The share image comes from ./opengraph-image.tsx
   return {
-    title: `${c.name} — Pawna Lake cottage`,
+    title: `${c.name} — Pawna Lake cottage near Pune & Lonavala`,
     description,
     alternates: { canonical: `/cottages/${c.slug}` },
-    openGraph: {
-      title: `${c.name} | ${site.name}`,
-      description,
-      images: imgs[0] ? [{ url: imgs[0].src, width: imgs[0].width, height: imgs[0].height, alt: imgs[0].alt }] : undefined,
-    },
+    openGraph: { title: `${c.name} | ${site.name}`, description, url: `/cottages/${c.slug}` },
   };
 }
 
@@ -64,7 +62,8 @@ export default async function CottagePage({ params }: PageProps<"/cottages/[slug
             src={hero.src}
             alt={hero.alt}
             fill
-            preload
+            loading="eager"
+            fetchPriority="high"
             sizes="100vw"
             quality={75}
             placeholder="blur"
@@ -230,6 +229,13 @@ export default async function CottagePage({ params }: PageProps<"/cottages/[slug
 
       <BookingBar c={c} />
       <ProvideEnquiry cottageName={c.name} />
+      <JsonLd data={accommodationLd(c, images.filter((i) => !i.placeholder).map((i) => i.src))} />
+      <JsonLd
+        data={breadcrumbLd([
+          { name: "Home", path: "/" },
+          { name: c.name, path: `/cottages/${c.slug}` },
+        ])}
+      />
     </article>
   );
 }

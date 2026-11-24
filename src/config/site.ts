@@ -38,8 +38,9 @@ export type Review = {
 export const site = {
   name: "Pawna Lake Cottages", // TODO: replace with the real brand name
   tagline: "Wake up to Pawna Lake", // TODO: confirm tagline
+  // Used for SEO meta descriptions. TODO: mention your real inclusions (meals, boating…) once confirmed.
   description:
-    "Lakeside Aroma and Bella cottages at Pawna Lake, Maval — a peaceful camping stay near Pune and Lonavala with meals, boating and campfire evenings.",
+    "Lakeside Aroma and Bella cottages at Pawna Lake, Maval — a peaceful Pawna Lake camping stay near Pune and Lonavala.",
   address: "", // TODO: "<full address>, Pawna Lake, Maval, Pune 410406"
   mapsEmbedUrl: "", // TODO: Google Maps "Embed a map" src URL
   mapsDirectionsUrl: "", // TODO: Google Maps share link for directions
@@ -115,6 +116,15 @@ export const inclusions = {
 export const policies = {
   cancellation: "", // TODO: cancellation policy text
   rules: [] as string[], // TODO: e.g. "Silent hours 12–6 AM"
+  /** Shown in confirmation emails and the terms. TODO: confirm, or set "" to hide. */
+  checkInNote: "Please carry a valid photo ID for every adult guest.",
+  /** Shown on /policies. TODO: set when you publish or update the policies. */
+  lastUpdated: "",
+};
+
+/** /about page. Sections with empty text are hidden. */
+export const about = {
+  story: "", // TODO: a few paragraphs about the property, its hosts and what makes it special
 };
 
 export const faqs: { q: string; a: string }[] = [

@@ -45,8 +45,8 @@ export function Hero({ children }: { children?: React.ReactNode }) {
           {site.tagline}
         </h1>
         <p className="mt-5 max-w-xl text-lg text-sand/85 md:text-xl">
-          Lakeside Aroma &amp; Bella cottages at {site.name} — a slow, golden-hour escape near Pune
-          and Lonavala.
+          Lakeside Aroma &amp; Bella cottages for Pawna Lake camping — a slow, golden-hour escape
+          near Pune and Lonavala.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
           <Magnetic>

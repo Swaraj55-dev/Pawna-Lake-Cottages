@@ -48,6 +48,22 @@ export const guestDetailsSchema = z.object({
 export type GuestDetailsInput = z.input<typeof guestDetailsSchema>;
 export type GuestDetails = z.output<typeof guestDetailsSchema>;
 
+export const contactSchema = z.object({
+  name: z.string().trim().min(2, "Please enter your name").max(120),
+  email: z.string().trim().pipe(z.email("Enter a valid email address")),
+  phone: z
+    .string()
+    .trim()
+    .max(20)
+    .refine((s) => s === "" || /^[+\d][\d\s-]{6,19}$/.test(s), { message: "Enter a valid phone number" })
+    .optional()
+    .default(""),
+  message: z.string().trim().min(10, "Please write a little more (10+ characters)").max(4000, "Please keep it under 4000 characters"),
+  /** Honeypot — real visitors never see or fill this. */
+  website: z.string().max(0).optional().default(""),
+});
+export type ContactInput = z.input<typeof contactSchema>;
+
 /** Body of POST /api/bookings — amounts are never accepted from the client. */
 export const createBookingSchema = z.object({
   stay: stayRequestSchema,

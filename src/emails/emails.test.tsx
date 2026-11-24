@@ -36,6 +36,7 @@ const site: EmailSite = {
   bookingUrl: "https://example.com/book/success/x",
   adminUrl: "https://example.com/admin",
   cancellationPolicy: "",
+  checkInNote: "Bring ID.",
 };
 
 describe("emails", () => {

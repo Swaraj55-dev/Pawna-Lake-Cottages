@@ -16,7 +16,7 @@
   --color-lake: #0e3b43;
   --color-lake-deep: #0a2a30;
   --color-sunset: #f2a65a;
-  --color-sunset-deep: #b8661f;
+  --color-sunset-deep: #9a5216; /* ≥4.5:1 on sand/card for small text (AA) */
   --color-sand: #f5efe6;
   --color-forest: #2f4f3a;
   --color-ink: #14201f;

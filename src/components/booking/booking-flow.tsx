@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
-import { Loader2 } from "lucide-react";
 import type { CottageSlug } from "@/config/site";
 import { formatINR } from "@/lib/format";
 import { guestDetailsSchema, type GuestDetailsInput, type StayRequest } from "@/lib/validation";
@@ -44,7 +43,10 @@ function maxValidStep(d: Draft, cottage?: BookCottage): number {
 
 export function BookingFlow({ cottages }: { cottages: BookCottage[] }) {
   const router = useRouter();
-  const [draft, setDraft] = useState<Draft | null>(null);
+  // Server-render step 1 with an empty draft (no loading flash / layout shift);
+  // the saved draft and URL params are applied right after hydration.
+  const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
+  const [hydrated, setHydrated] = useState(false);
   const [step, setStep] = useState(0);
   const [maxReached, setMaxReached] = useState(0);
   const [pay, setPay] = useState<{ busy: boolean; error: ApiError | null; info: string | null }>({
@@ -85,20 +87,21 @@ export function BookingFlow({ cottages }: { cottages: BookCottage[] }) {
     setDraft(init);
     setStep(start);
     setMaxReached(valid);
+    setHydrated(true);
   }, [cottages]);
 
   /* ---------------- persist draft for this tab ---------------- */
   useEffect(() => {
-    if (!draft) return;
+    if (!hydrated) return; // don't overwrite the saved draft with the SSR placeholder
     try {
       sessionStorage.setItem(STORAGE_KEY, JSON.stringify(draft));
     } catch {
       /* private mode etc. */
     }
-  }, [draft]);
+  }, [draft, hydrated]);
 
   /* ---------------- browser back / forward ---------------- */
-  const validStep = draft ? maxValidStep(draft, cottage) : 0;
+  const validStep = maxValidStep(draft, cottage);
   const validRef = useRef(validStep);
   useEffect(() => {
     validRef.current = validStep;
@@ -136,7 +139,7 @@ export function BookingFlow({ cottages }: { cottages: BookCottage[] }) {
     [],
   );
 
-  const update = (patch: Partial<Draft>) => setDraft((d) => (d ? { ...d, ...patch } : d));
+  const update = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }));
 
   /* ---------------- live server quote ---------------- */
   const stay: StayRequest | null =
@@ -218,7 +221,7 @@ export function BookingFlow({ cottages }: { cottages: BookCottage[] }) {
   };
 
   const action: PrimaryAction = useMemo(() => {
-    if (!draft) return { label: "Continue", disabled: true };
+    if (!hydrated) return { label: "Choose dates", disabled: true };
     switch (step) {
       case 0:
         return { label: "Choose dates", disabled: !draft.type, onClick: () => goTo(1) };
@@ -241,15 +244,7 @@ export function BookingFlow({ cottages }: { cottages: BookCottage[] }) {
         };
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draft, step, quote.data, quote.loading, pay.busy, validStep, goTo]);
-
-  if (!draft) {
-    return (
-      <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground" role="status">
-        <Loader2 className="mr-2 size-5 animate-spin" aria-hidden /> Loading booking…
-      </div>
-    );
-  }
+  }, [draft, step, quote.data, quote.loading, pay.busy, validStep, goTo, hydrated]);
 
   const reachable = Math.min(maxReached, validStep);
 

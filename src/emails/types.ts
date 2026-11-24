@@ -30,4 +30,5 @@ export type EmailSite = {
   bookingUrl: string;
   adminUrl: string;
   cancellationPolicy: string;
+  checkInNote: string;
 };
