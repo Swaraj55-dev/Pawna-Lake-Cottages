@@ -27,7 +27,7 @@ Supporting documents: [`security/ATTACK_SURFACE.md`](security/ATTACK_SURFACE.md)
 | SEC-03 | Payment amount, currency and capture status not verified before confirming | **High** | Confirmed / Conditional impact | Fixed (Stage 4) |
 | SEC-04 | Late payment on an expired, unswept hold can overbook | **High** | Confirmed (narrow) | Fixed (Stage 4) |
 | SEC-05 | Rate limits missing on most endpoints and not shared across instances | **Medium** | Confirmed | Open |
-| SEC-06 | No security headers (CSP, frame-ancestors, nosniff, Referrer-, Permissions-Policy) | **Medium** | Confirmed | Open |
+| SEC-06 | No security headers (CSP, frame-ancestors, nosniff, Referrer-, Permissions-Policy) | **Medium** | Confirmed | Fixed (Stage 5) |
 | SEC-07 | Booking success page shows guest PII to anyone holding the link | **Medium** | Confirmed | Open |
 | SEC-08 | Admin session cookies not `HttpOnly`/`Secure`, 400-day lifetime | **Medium** | Confirmed | Open |
 | SEC-09 | Concurrent `create_booking` not yet proven race-free | **Medium** | Unverified | Open |
@@ -109,6 +109,7 @@ Supporting documents: [`security/ATTACK_SURFACE.md`](security/ATTACK_SURFACE.md)
 
   See Decision 3 on `script-src` and inline scripts.
 - **Test**: a header-assertion test on all page types. A browser test confirming the 3D hero renders, the gallery and lightbox work, and Razorpay Checkout opens (the stub test plus one real test-mode load) with **zero CSP violations** in the console. A ZAP baseline scan in Stage 5.
+- **Stage 5 status**: Fixed with a global header rule and a regression test. The built localhost app returned the configured headers on `/`, `/book` and `/gallery`; Playwright found a rendered 3D canvas and working gallery lightbox with no CSP errors. Razorpay Checkout was not exercised because payment credentials are not configured, and ZAP was unavailable.
 
 ### SEC-07 — Booking success page shows guest PII to anyone holding the link · **Medium**
 - **File**: `src/app/(site)/book/success/[bookingId]/page.tsx:69` and the details grid; `src/lib/bookings.ts:13`

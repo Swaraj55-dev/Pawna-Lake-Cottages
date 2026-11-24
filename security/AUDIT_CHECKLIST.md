@@ -96,7 +96,7 @@ Severities are assigned in Stage 3, not here.
 
 | # | Check | Status | Evidence / notes |
 |---|---|---|---|
-| G1 | CSP, frame-ancestors / X-Frame-Options, HSTS, nosniff, Referrer-Policy, Permissions-Policy | **Confirmed** | `next.config.ts` sets **no security headers** and there is no header logic in `proxy.ts`. The site can be framed (clickjacking of the booking/admin UI), and there's no CSP to limit script sources. (Vercel adds HSTS on its own domains by default — verify on the final custom domain.) |
+| G1 | CSP, frame-ancestors / X-Frame-Options, HSTS, nosniff, Referrer-Policy, Permissions-Policy | **Fixed (Stage 5)** | Global headers are configured in `next.config.ts` and verified on `/`, `/book` and `/gallery` in the built localhost app. Playwright confirmed the home 3D canvas and gallery lightbox load with no CSP errors. Razorpay Checkout and ZAP were not tested. |
 | G2 | No permissive CORS on API routes | **Not an issue** | No `Access-Control-*` headers anywhere → same-origin only. |
 | G3 | Generic error responses in production | **Not an issue** | Unknown errors → `{error:"SERVER_ERROR"}` (`src/lib/errors.ts`); Next internal errors rethrown; no stack traces in responses. |
 | G4 | `.env*` gitignored except `.env.example`; Gitleaks over history | **Not an issue** | `.gitignore:34-35`; only `.env.example` tracked; Gitleaks: no leaks in 10 commits. |
