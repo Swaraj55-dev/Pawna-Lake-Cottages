@@ -42,7 +42,7 @@ export async function getImages(category: GalleryCategory): Promise<SiteImage[]>
   const dir = path.join(ROOT, category);
   let files: string[] = [];
   try {
-    files = (await readdir(dir)).filter((f) => IMAGE_EXT.test(f)).sort();
+    files = (await readdir(dir)).filter((f) => IMAGE_EXT.test(f) && !f.startsWith("panorama")).sort();
   } catch {
     return [];
   }
@@ -74,6 +74,18 @@ export async function getImages(category: GalleryCategory): Promise<SiteImage[]>
       };
     }),
   );
+}
+
+/** URL of /public/images/<slug>/panorama.(jpg|webp) if present, else null. */
+export async function getPanorama(slug: string): Promise<string | null> {
+  "use cache";
+  cacheLife("max");
+  try {
+    const f = (await readdir(path.join(ROOT, slug))).find((n) => /^panorama\.(jpe?g|webp)$/i.test(n));
+    return f ? `/images/${slug}/${f}` : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function getAllImages(): Promise<SiteImage[]> {

@@ -142,6 +142,12 @@ export const galleryCategories = [
 ] as const;
 export type GalleryCategory = (typeof galleryCategories)[number]["key"];
 
+/**
+ * Optional YouTube videos for the gallery page (hidden when empty).
+ * `youtubeId` is the part after "v=" in a YouTube URL.
+ */
+export const videos: { title: string; youtubeId: string }[] = [];
+
 /** Only real reviews. Leave empty to hide the Reviews section. */
 export const reviews: Review[] = [];
 
