@@ -1,0 +1,134 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "lenis/dist/lenis.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter);
+  --font-heading: var(--font-fraunces);
+  --font-serif: var(--font-fraunces);
+
+  /* Brand palette — "luxury lakeside at golden hour" */
+  --color-lake: #0e3b43;
+  --color-lake-deep: #0a2a30;
+  --color-sunset: #f2a65a;
+  --color-sunset-deep: #b8661f;
+  --color-sand: #f5efe6;
+  --color-forest: #2f4f3a;
+  --color-ink: #14201f;
+
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  --background: #f5efe6;
+  --foreground: #14201f;
+  --card: #fbf8f3;
+  --card-foreground: #14201f;
+  --popover: #fbf8f3;
+  --popover-foreground: #14201f;
+  --primary: #0e3b43;
+  --primary-foreground: #f5efe6;
+  --secondary: #2f4f3a;
+  --secondary-foreground: #f5efe6;
+  --muted: #ebe3d7;
+  --muted-foreground: #4a5856;
+  --accent: #f2a65a;
+  --accent-foreground: #14201f;
+  --destructive: #b42318;
+  --border: #ddd3c4;
+  --input: #cfc4b3;
+  --ring: #0e3b43;
+  --radius: 0.75rem;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-heading tracking-tight;
+    font-optical-sizing: auto;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-sunset);
+    outline-offset: 2px;
+  }
+}
+
+@layer utilities {
+  /* Frosted glass panel over imagery */
+  .glass {
+    background: rgb(245 239 230 / 0.12);
+    border: 1px solid rgb(245 239 230 / 0.22);
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+  }
+  .glass-light {
+    background: rgb(251 248 243 / 0.72);
+    border: 1px solid rgb(255 255 255 / 0.6);
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+  }
+  .container-page {
+    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+}
+
+/* Soft film-grain overlay across the whole site */
+.grain::after {
+  content: "";
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  opacity: 0.06;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
