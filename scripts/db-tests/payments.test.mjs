@@ -1,0 +1,93 @@
+// Tests confirm_booking_payment on PGlite with both migrations applied.
+import { PGlite } from "@electric-sql/pglite";
+import { pgcrypto } from "@electric-sql/pglite/contrib/pgcrypto";
+import { readFileSync } from "node:fs";
+
+const [m1, m2] = process.argv.slice(2);
+const db = new PGlite({ extensions: { pgcrypto } });
+let pass = 0, fail = 0;
+const ok = (c, m, x = "") => { if (c) pass++; else fail++; console.log(`  ${c ? "✓" : "✗"} ${m}`, c ? "" : x); };
+
+await db.exec(`
+  create role anon nologin; create role authenticated nologin; create role service_role nologin bypassrls;
+  create schema auth;
+  create function auth.jwt() returns jsonb language sql stable as $$ select '{}'::jsonb $$;
+  grant usage on schema public to anon, authenticated, service_role;
+  alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
+`);
+await db.exec(readFileSync(m1, "utf8"));
+await db.exec(readFileSync(m2, "utf8"));
+await db.exec(readFileSync(m2, "utf8")); // idempotent
+console.log("migrations applied");
+
+const mk = async (ci, co, n, order) => {
+  const b = (await db.query(
+    `select * from create_booking('aroma',$1,$2,$3::int * 2,$3,'G','9876543210','g@x.com','veg',null,4000,2000,'{}')`, [ci, co, n])).rows[0];
+  await db.query(`update bookings set razorpay_order_id=$1 where id=$2`, [order, b.id]);
+  return b;
+};
+const confirm = async (order, pay, amt = 2000) =>
+  (await db.query(`select * from confirm_booking_payment($1,$2,$3)`, [order, pay, amt])).rows[0];
+const row = async (id) => (await db.query(`select * from bookings where id=$1`, [id])).rows[0];
+
+console.log("normal + idempotent");
+const b1 = await mk("2026-12-04", "2026-12-06", 1, "order_1");
+let r = await confirm("order_1", "pay_1");
+ok(r.outcome === "confirmed" && r.booking_id === b1.id, "first call confirms");
+let s = await row(b1.id);
+ok(s.status === "confirmed" && s.amount_paid === 2000 && s.razorpay_payment_id === "pay_1" && s.expires_at === null && s.confirmed_at, "row updated (paid, no hold)");
+r = await confirm("order_1", "pay_1");
+ok(r.outcome === "already_confirmed", "webhook replay -> already_confirmed (no second email)");
+r = await confirm("order_1", "pay_1");
+ok(r.outcome === "already_confirmed", "third replay still idempotent");
+
+console.log("duplicate payment on same order");
+r = await confirm("order_1", "pay_1b");
+ok(r.outcome === "duplicate_payment", "different payment id flagged");
+await confirm("order_1", "pay_1b");
+s = await row(b1.id);
+ok(s.razorpay_payment_id === "pay_1" && (s.status_note.match(/pay_1b/g) || []).length === 1, "original payment kept, note added once", s.status_note);
+
+console.log("unknown order");
+ok((await confirm("order_x", "pay_x")).outcome === "not_found", "not_found");
+
+console.log("late payment after hold expiry");
+const b2 = await mk("2026-12-10", "2026-12-11", 2, "order_2");
+await db.query(`update bookings set expires_at = now() - interval '1 minute' where id=$1`, [b2.id]);
+await db.query(`select expire_pending_bookings()`);
+ok((await row(b2.id)).status === "cancelled", "hold expired -> cancelled");
+r = await confirm("order_2", "pay_2");
+ok(r.outcome === "late_confirmed", "still available -> late_confirmed");
+s = await row(b2.id);
+ok(s.status === "confirmed" && s.status_note === "confirmed after hold expired", "row confirmed with note");
+ok((await confirm("order_2", "pay_2")).outcome === "already_confirmed", "replay after late confirm is idempotent");
+
+console.log("late payment but sold out");
+const b3 = await mk("2026-12-20", "2026-12-21", 3, "order_3");
+await db.query(`update bookings set expires_at = now() - interval '1 minute' where id=$1`, [b3.id]);
+await db.query(`select expire_pending_bookings()`);
+await mk("2026-12-20", "2026-12-21", 3, "order_3b"); // someone else takes 3 of 5
+r = await confirm("order_3", "pay_3");
+ok(r.outcome === "refund_required", "only 2 left, needs 3 -> refund_required");
+s = await row(b3.id);
+ok(s.status === "cancelled" && s.amount_paid === 2000 && /refund required/.test(s.status_note), "stays cancelled, payment recorded, flagged");
+ok((await confirm("order_3", "pay_3")).outcome === "refund_required", "replay -> still refund_required (no duplicate alert logic needed)");
+
+console.log("admin-cancelled booking paid");
+const b4 = await mk("2026-12-24", "2026-12-25", 1, "order_4");
+await db.query(`update bookings set status='cancelled', status_note='cancelled by admin' where id=$1`, [b4.id]);
+ok((await confirm("order_4", "pay_4")).outcome === "refund_required", "admin-cancelled + paid -> refund_required (not re-confirmed)");
+
+console.log("unknown amount");
+const b5 = await mk("2026-12-28", "2026-12-29", 1, "order_5");
+await db.query(`update bookings set advance_amount = 1234 where id=$1`, [b5.id]);
+ok((await db.query(`select * from confirm_booking_payment('order_5','pay_5',null)`)).rows[0].outcome === "confirmed", "NULL amount still confirms");
+ok((await row(b5.id)).amount_paid === 1234, "NULL amount records the booking's advance");
+
+console.log("grants");
+await db.exec("set role anon");
+try { await confirm("order_1", "pay_1"); ok(false, "anon blocked"); } catch (e) { ok(/permission denied/.test(e.message), "anon cannot call confirm_booking_payment"); }
+await db.exec("reset role");
+
+console.log(`\n${pass} passed, ${fail} failed`);
+process.exit(fail ? 1 : 0);

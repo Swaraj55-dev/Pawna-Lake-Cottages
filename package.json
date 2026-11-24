@@ -2,6 +2,9 @@
   "name": "pawna-lake-cottages",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=22.18"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -11,6 +14,7 @@
     "placeholders": "node scripts/generate-placeholders.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:db": "node scripts/db-tests/run.mjs",
     "db:sync-cottages": "node --no-warnings=MODULE_TYPELESS_PACKAGE_JSON --env-file-if-exists=.env.local scripts/sync-cottages.mjs"
   },
   "dependencies": {
@@ -41,6 +45,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.6.0",
     "@tailwindcss/turbopack": "4.3.3",
     "@types/node": "^22.20.5",
     "@types/react": "^19",
