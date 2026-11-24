@@ -24,7 +24,7 @@ Supporting documents: [`security/ATTACK_SURFACE.md`](security/ATTACK_SURFACE.md)
 |---|---|---|---|---|
 | SEC-01 | Hold-flooding can block all inventory | **High** | Confirmed | Open |
 | SEC-02 | Admin allow-list accepts unconfirmed email addresses | **High** | Conditional | Open |
-| SEC-03 | Payment amount, currency and capture status not verified before confirming | **High** | Confirmed / Conditional impact | Open |
+| SEC-03 | Payment amount, currency and capture status not verified before confirming | **High** | Confirmed / Conditional impact | Fixed (Stage 4) |
 | SEC-04 | Late payment on an expired, unswept hold can overbook | **High** | Confirmed (narrow) | Open |
 | SEC-05 | Rate limits missing on most endpoints and not shared across instances | **Medium** | Confirmed | Open |
 | SEC-06 | No security headers (CSP, frame-ancestors, nosniff, Referrer-, Permissions-Policy) | **Medium** | Confirmed | Open |
@@ -75,6 +75,7 @@ Supporting documents: [`security/ATTACK_SURFACE.md`](security/ATTACK_SURFACE.md)
   1. **DB:** new migration. `confirm_booking_payment` takes the amount in paise and the currency, and confirms only when they equal `advance_amount × 100` and `INR`. Otherwise it records the payment and flags `amount_mismatch` for the admin.
   2. **Server:** verify confirms only when the payment `status` is `captured`. If the lookup fails or the status is `authorized`, it returns "pending" and leaves confirmation to the `payment.captured` webhook. The success page already polls.
 - **Test**: DB tests for wrong amount, wrong currency, and a correct payment. Route tests with a mocked Razorpay payment fetch: `authorized` → not confirmed, `captured` + right amount → confirmed, lookup failure → not confirmed.
+- **Stage 4 status**: Fixed by migration `20261125000200_sec03_payment_validation.sql`; the route now waits on lookup failures and non-captured payments, while the database validates exact INR paise against the booking advance. Covered by the payment DB suite and `src/app/api/payments/verify/route.test.ts`.
 
 ### SEC-04 — Late payment on an expired, unswept hold can overbook · **High (narrow)**
 - **File**: `supabase/migrations/20261124000100_payments.sql:42-48`, `supabase/migrations/20261124000200_admin.sql:44-50`

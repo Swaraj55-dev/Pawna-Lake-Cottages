@@ -10,8 +10,8 @@ const mk = async (ci, co, n, order) => {
   await db.query(`update bookings set razorpay_order_id=$1 where id=$2`, [order, b.id]);
   return b;
 };
-const confirm = async (order, pay, amt = 2000) =>
-  (await db.query(`select * from confirm_booking_payment($1,$2,$3)`, [order, pay, amt])).rows[0];
+const confirm = async (order, pay, amountPaise = 200000, currency = "INR") =>
+  (await db.query(`select * from confirm_booking_payment($1,$2,$3,$4)`, [order, pay, amountPaise, currency])).rows[0];
 const row = async (id) => (await db.query(`select * from bookings where id=$1`, [id])).rows[0];
 
 console.log("normal + idempotent");
@@ -62,11 +62,24 @@ const b4 = await mk("2026-12-24", "2026-12-25", 1, "order_4");
 await db.query(`update bookings set status='cancelled', status_note='cancelled by admin' where id=$1`, [b4.id]);
 ok((await confirm("order_4", "pay_4")).outcome === "refund_required", "admin-cancelled + paid -> refund_required (not re-confirmed)");
 
+console.log("payment amount and currency validation");
+const b6 = await mk("2027-01-10", "2027-01-11", 1, "order_6");
+r = await confirm("order_6", "pay_6", 199999);
+ok(r.outcome === "refund_required", "wrong amount is not confirmed");
+s = await row(b6.id);
+ok(s.status === "pending_payment" && s.razorpay_payment_id === "pay_6" && s.status_note.startsWith("amount_mismatch"), "wrong amount is recorded for admin review");
+
+const b7 = await mk("2027-01-15", "2027-01-16", 1, "order_7");
+r = await confirm("order_7", "pay_7", 200000, "USD");
+ok(r.outcome === "refund_required", "wrong currency is not confirmed");
+s = await row(b7.id);
+ok(s.status === "pending_payment" && s.status_note.includes("USD"), "wrong currency is recorded for admin review");
+
 console.log("unknown amount");
 const b5 = await mk("2026-12-28", "2026-12-29", 1, "order_5");
 await db.query(`update bookings set advance_amount = 1234 where id=$1`, [b5.id]);
-ok((await db.query(`select * from confirm_booking_payment('order_5','pay_5',null)`)).rows[0].outcome === "confirmed", "NULL amount still confirms");
-ok((await row(b5.id)).amount_paid === 1234, "NULL amount records the booking's advance");
+ok((await db.query(`select * from confirm_booking_payment('order_5','pay_5',null,null)`)).rows[0].outcome === "pending", "NULL payment details remain pending");
+ok((await row(b5.id)).status === "pending_payment" && (await row(b5.id)).amount_paid === 0, "NULL payment details do not confirm or record payment");
 
 console.log("grants");
 await db.exec("set role anon");

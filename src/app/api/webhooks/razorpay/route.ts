@@ -3,7 +3,7 @@ import { confirmPayment } from "@/lib/payments";
 import { verifyWebhookSignature } from "@/lib/razorpay-signature";
 import { isSupabaseConfigured } from "@/lib/supabase/admin";
 
-type PaymentEntity = { id: string; order_id: string | null; amount: number; status: string };
+type PaymentEntity = { id: string; order_id: string | null; amount: number; currency: string; status: string };
 type WebhookEvent = {
   event: string;
   payload?: { payment?: { entity?: PaymentEntity } };
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
   }
 
   const payment = event.payload?.payment?.entity;
-  if (!["payment.captured", "order.paid"].includes(event.event) || !payment?.order_id) {
+  if (!["payment.captured", "order.paid"].includes(event.event) || !payment?.order_id || payment.status !== "captured") {
     // Acknowledge events we don't act on so Razorpay doesn't retry them.
     return NextResponse.json({ received: true, ignored: event.event });
   }
@@ -48,6 +48,7 @@ export async function POST(request: Request) {
       orderId: payment.order_id,
       paymentId: payment.id,
       amountPaise: payment.amount,
+      currency: payment.currency,
       via: "webhook",
     });
     // 200 even for not_found (e.g. an order from another integration) — nothing to retry.

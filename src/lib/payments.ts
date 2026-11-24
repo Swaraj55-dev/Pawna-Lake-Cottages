@@ -10,6 +10,7 @@ export type ConfirmOutcome =
   | "already_confirmed"
   | "duplicate_payment"
   | "refund_required"
+  | "pending"
   | "not_found";
 
 /**
@@ -20,15 +21,17 @@ export type ConfirmOutcome =
 export async function confirmPayment(opts: {
   orderId: string;
   paymentId: string;
-  /** null when unknown -> the booking's advance amount is recorded */
+  /** null until Razorpay confirms the payment has been captured */
   amountPaise: number | null;
+  currency: string | null;
   via: "verify" | "webhook";
 }): Promise<{ outcome: ConfirmOutcome; bookingId: string | null }> {
   const db = getServiceClient();
   const { data, error } = await db.rpc("confirm_booking_payment", {
     p_order_id: opts.orderId,
     p_payment_id: opts.paymentId,
-    p_amount: opts.amountPaise == null ? null : Math.round(opts.amountPaise / 100),
+    p_amount_paise: opts.amountPaise,
+    p_currency: opts.currency,
   });
   if (error) throw new Error(`confirm_booking_payment failed: ${error.message}`);
   const row = (Array.isArray(data) ? data[0] : data) as { outcome: ConfirmOutcome; booking_id: string | null };
