@@ -75,6 +75,20 @@ ok(r.outcome === "refund_required", "wrong currency is not confirmed");
 s = await row(b7.id);
 ok(s.status === "pending_payment" && s.status_note.includes("USD"), "wrong currency is recorded for admin review");
 
+console.log("expired unswept hold cannot overbook after admin reactivation");
+const b8 = await mk("2027-01-20", "2027-01-21", 4, "order_8");
+await db.query(`update bookings set status='confirmed', expires_at=null, confirmed_at=now() where id=$1`, [b8.id]);
+await db.query(`update bookings set status='cancelled', status_note='cancelled by admin', confirmed_at=null where id=$1`, [b8.id]);
+const b9 = await mk("2027-01-20", "2027-01-21", 2, "order_9");
+await db.query(`update bookings set expires_at=now() - interval '1 minute' where id=$1`, [b9.id]);
+r = (await db.query(`select * from admin_set_booking_status($1,'confirmed',null)`, [b8.id])).rows[0];
+ok(r.status === "confirmed", "admin can reactivate the cancelled booking after the expired hold is swept");
+r = await confirm("order_9", "pay_9");
+ok(r.outcome === "refund_required", "late payment for the expired unswept hold is refunded when inventory is no longer available");
+s = await row(b9.id);
+ok(s.status === "cancelled" && s.status_note.includes("refund required"), "expired booking stays cancelled and is flagged for refund");
+ok((await row(b8.id)).status === "confirmed", "only the reactivated booking holds the inventory");
+
 console.log("unknown amount");
 const b5 = await mk("2026-12-28", "2026-12-29", 1, "order_5");
 await db.query(`update bookings set advance_amount = 1234 where id=$1`, [b5.id]);

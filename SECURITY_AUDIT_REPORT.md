@@ -25,7 +25,7 @@ Supporting documents: [`security/ATTACK_SURFACE.md`](security/ATTACK_SURFACE.md)
 | SEC-01 | Hold-flooding can block all inventory | **High** | Confirmed | Open |
 | SEC-02 | Admin allow-list accepts unconfirmed email addresses | **High** | Conditional | Open |
 | SEC-03 | Payment amount, currency and capture status not verified before confirming | **High** | Confirmed / Conditional impact | Fixed (Stage 4) |
-| SEC-04 | Late payment on an expired, unswept hold can overbook | **High** | Confirmed (narrow) | Open |
+| SEC-04 | Late payment on an expired, unswept hold can overbook | **High** | Confirmed (narrow) | Fixed (Stage 4) |
 | SEC-05 | Rate limits missing on most endpoints and not shared across instances | **Medium** | Confirmed | Open |
 | SEC-06 | No security headers (CSP, frame-ancestors, nosniff, Referrer-, Permissions-Policy) | **Medium** | Confirmed | Open |
 | SEC-07 | Booking success page shows guest PII to anyone holding the link | **Medium** | Confirmed | Open |
@@ -85,6 +85,7 @@ Supporting documents: [`security/ATTACK_SURFACE.md`](security/ATTACK_SURFACE.md)
   1. In `confirm_booking_payment`, treat `pending_payment AND expires_at < now()` exactly like the expired path: lock, re-check availability, then `late_confirmed` or `refund_required`.
   2. Call `expire_pending_bookings()` at the start of `admin_set_booking_status`.
 - **Test**: a DB test reproducing the scenario (expired unswept hold → admin re-activates a cancelled booking into the last unit → late payment arrives) → `refund_required` and no double-confirm.
+- **Stage 4 status**: Fixed by migration `20261125000300_sec04_expired_payment_holds.sql`; payment confirmation and admin status changes sweep expired holds before checking availability. Covered by the payment and admin database suites.
 
 ### SEC-05 — Rate limits missing on most endpoints and not shared · **Medium**
 - **File**: `src/lib/rate-limit.ts`; unprotected routes are `/api/quote`, `/api/availability`, `/api/payments/verify`, the `sendMagicLink` action, and the OG image routes.
