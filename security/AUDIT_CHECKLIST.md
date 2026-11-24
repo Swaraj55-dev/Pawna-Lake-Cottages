@@ -100,7 +100,7 @@ Severities are assigned in Stage 3, not here.
 | G2 | No permissive CORS on API routes | **Not an issue** | No `Access-Control-*` headers anywhere → same-origin only. |
 | G3 | Generic error responses in production | **Not an issue** | Unknown errors → `{error:"SERVER_ERROR"}` (`src/lib/errors.ts`); Next internal errors rethrown; no stack traces in responses. |
 | G4 | `.env*` gitignored except `.env.example`; Gitleaks over history | **Not an issue** | `.gitignore:34-35`; only `.env.example` tracked; Gitleaks: no leaks in 10 commits. |
-| G5 | `npm audit --omit=dev` clean of high/critical; lockfile committed | **Possible risk** (low) | 0 high/critical; 4 moderate, all via the `shadcn` CLI (`minimatch` ReDoS). `shadcn` is listed in `dependencies` because `globals.css` imports `shadcn/tailwind.css`; the vulnerable code is CLI-only and never runs in the deployed app. Fix: move to `devDependencies`. `package-lock.json` is committed. |
+| G5 | `npm audit --omit=dev` clean of high/critical; lockfile committed | **Fixed for production** | `shadcn` is in `devDependencies`; `npm audit --omit=dev` reports 0 vulnerabilities. Four moderate advisories remain in the development-only dependency tree. |
 | G6 | No debug/test/seed endpoints in production | **Not an issue** | None under `src/app`. Test helpers (fake Supabase, stubs) live outside the repo; `scripts/db-tests` aren't routes. |
 
 ## H. Abuse and email

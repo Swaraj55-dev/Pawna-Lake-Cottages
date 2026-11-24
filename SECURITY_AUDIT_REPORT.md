@@ -34,7 +34,7 @@ Supporting documents: [`security/ATTACK_SURFACE.md`](security/ATTACK_SURFACE.md)
 | SEC-10 | Payment IDs and raw error objects written to logs | **Low** | Confirmed | Open |
 | SEC-11 | Database doesn't enforce check-in ≥ today or a maximum stay | **Low** | Confirmed (defence-in-depth) | Open |
 | SEC-12 | No app-level rate limit on admin magic-link requests | **Low** | Confirmed | Open |
-| SEC-13 | `shadcn` CLI (with `minimatch` ReDoS advisory) listed as a production dependency | **Low** | Confirmed | Open |
+| SEC-13 | `shadcn` CLI (with `minimatch` ReDoS advisory) listed as a production dependency | **Low** | Confirmed | Fixed (Stage 5) |
 | SEC-14 | Visitor's name placed in the contact-email Subject header | **Low** | Confirmed | Open |
 | SEC-15 | A 0 % advance silently turns public bookings into confirmed-without-payment | **Low** (latent) | Conditional | Open |
 | SEC-16 | Magic-link redirect URL built from the request `Origin` header | **Low** | Confirmed | Open |
@@ -159,6 +159,7 @@ Supporting documents: [`security/ATTACK_SURFACE.md`](security/ATTACK_SURFACE.md)
 - **Impact**: Four moderate advisories (GHSA-g3hv-75wg-m249) appear in `npm audit --omit=dev`. The vulnerable code is CLI-only and never runs on the site.
 - **Proposed fix**: Move `shadcn` to `devDependencies`; Vercel installs dev dependencies for the build.
 - **Test**: `npm audit --omit=dev` shows 0 vulnerabilities, and the build plus the visual check of styles still pass.
+- **Stage 5 status**: Fixed for production by moving `shadcn` to `devDependencies`. `npm audit --omit=dev` reports 0 vulnerabilities and the production build passes. Four moderate advisories remain in the development-only dependency tree.
 
 ### SEC-14 — Visitor's name in the contact-email Subject header · **Low**
 - **File**: `src/lib/email.ts:96`, `src/lib/validation.ts:52`
