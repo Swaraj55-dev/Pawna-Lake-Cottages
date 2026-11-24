@@ -1,10 +1,13 @@
 # Security Audit Report — Pawna Lake Cottages
 
-**Status: Stage 3 — findings registered, no fixes applied yet.**
-Audited commit `6f02adf` on 2026-11-24 against localhost only, with Razorpay in test mode and no real keys.
+**Status: Final report (Stage 7), 2026-11-24.** Scope: local project review through commit `9fa4811`; no production Supabase, Razorpay, Resend, Vercel, or other public service was accessed. The supplied `pawna-security-audit-prompt.md` was used because `SECURITY_PROMPT.md` was not present.
 Supporting documents: [`security/ATTACK_SURFACE.md`](security/ATTACK_SURFACE.md) (Stage 1) · [`security/AUDIT_CHECKLIST.md`](security/AUDIT_CHECKLIST.md) (Stage 2).
 
-> Sections A (owner summary), C (testing results), D (fixed counts), E (remaining risks and owner actions) and F (verdict) are completed in Stage 7. This version contains the **Vulnerability Register (B)** and the **decisions needed before fixing**.
+## A. Summary
+
+The review found no immediate way to bypass payment or read all booking records. Five protections have been added: limits on active holds, stricter payment checks, safer handling of expired holds, browser security headers, and removal of the vulnerable tool from production dependencies.
+
+The site is **not ready for public launch**. Admin access could be at risk if Supabase allows unverified email addresses to sign up, and other privacy and abuse protections still need work. Full booking, payment, email and admin flows could not be checked because local service credentials are not configured. The production dependency audit is clean, but four moderate advisories remain in development-only tools.
 
 ---
 
@@ -18,11 +21,11 @@ Supporting documents: [`security/ATTACK_SURFACE.md`](security/ATTACK_SURFACE.md)
 
 **Type**: **Confirmed** = a verified gap in the code. **Conditional** = becomes exploitable only under a configuration outside the repo; the severity shown is for that case. **Unverified** = no known defect, but the property hasn't been proven by a test yet.
 
-**No Critical findings.** The price is server-only, payment signatures are verified correctly, no secrets appear in the client bundle or git history, and RLS blocks public access to bookings.
+**No Critical findings were identified.** Prices are computed on the server, payment signature and amount checks are covered by tests, Gitleaks found no secrets in the history it scanned, and tested anon-role queries did not expose bookings.
 
 | ID | Name | Severity | Type | Status |
 |---|---|---|---|---|
-| SEC-01 | Hold-flooding can block all inventory | **High** | Confirmed | Open |
+| SEC-01 | Hold-flooding can block all inventory | **High** | Confirmed | Fixed (Stage 4) |
 | SEC-02 | Admin allow-list accepts unconfirmed email addresses | **High** | Conditional | Open |
 | SEC-03 | Payment amount, currency and capture status not verified before confirming | **High** | Confirmed / Conditional impact | Fixed (Stage 4) |
 | SEC-04 | Late payment on an expired, unswept hold can overbook | **High** | Confirmed (narrow) | Fixed (Stage 4) |
@@ -53,6 +56,7 @@ Supporting documents: [`security/ATTACK_SURFACE.md`](security/ATTACK_SURFACE.md)
   2. **Server:** pass the hashed IP and use the shared limiter from SEC-05 on `/api/bookings`.
   3. **Optional:** Cloudflare Turnstile on the Pay step (see Decision 1).
 - **Test that proves it**: a DB test where a second active hold for the same phone or IP hash → `TOO_MANY_HOLDS`, and a hold becomes allowed again after expiry; an API test where 50 attempts from one IP → at most N holds created.
+- **Stage 4 status**: Fixed by migration `20261125000100_sec01_hold_limits.sql`; active website holds are limited to one per phone and two per hashed IP, with replacement and expiry handling. The PGlite hold-limit suite passes. The exact 50-request HTTP burst and a persistent Vercel-wide rate limiter remain untested/open under SEC-05.
 
 ### SEC-02 — Admin allow-list accepts unconfirmed email addresses · **High (conditional)**
 - **File**: `src/lib/admin-auth.ts:19`, `src/proxy.ts:32`, `src/app/auth/callback/route.ts:36`, `src/app/admin/actions.ts` (`shouldCreateUser: true`)
@@ -154,7 +158,7 @@ Supporting documents: [`security/ATTACK_SURFACE.md`](security/ATTACK_SURFACE.md)
 - **Test**: burst test where the sixth request in the window sends no OTP (checked on the fake Supabase) and the response stays identical.
 
 ### SEC-13 — `shadcn` CLI (minimatch ReDoS advisory) in production dependencies · **Low**
-- **File**: `package.json` (`dependencies.shadcn`)
+- **File**: `package.json` (`devDependencies.shadcn`)
 - **Root cause**: Added by `shadcn init`; it's only needed for the `shadcn/tailwind.css` import at build time.
 - **Impact**: Four moderate advisories (GHSA-g3hv-75wg-m249) appear in `npm audit --omit=dev`. The vulnerable code is CLI-only and never runs on the site.
 - **Proposed fix**: Move `shadcn` to `devDependencies`; Vercel installs dev dependencies for the build.
@@ -205,15 +209,71 @@ Supporting documents: [`security/ATTACK_SURFACE.md`](security/ATTACK_SURFACE.md)
 
 ---
 
-## Decisions needed before Stage 4 (fixing)
+## C. Testing results
 
-1. **Bot protection on the Pay step (SEC-01)**: add free **Cloudflare Turnstile**? It needs a free Cloudflare account and site key, and adds a small widget on step 5. *Recommendation: yes, but the per-phone and per-IP hold limits alone already fix SEC-01; Turnstile can come later.*
-2. **Real Postgres for the concurrency proof (SEC-09)**: OK to add the free `embedded-postgres` npm package (downloads a local Postgres binary; dev-only), or would you rather run it against a free Supabase **preview/branch** project you create?
-3. **CSP strictness (SEC-06)**: Next.js injects inline scripts, so a strict CSP needs per-request **nonces**, which would make every page dynamic and lose the static pages and their Lighthouse scores. *Recommendation:* `script-src 'self' 'unsafe-inline' https://checkout.razorpay.com`, plus everything else locked down and `frame-ancestors 'none'`. This is a documented, common trade-off. Strict nonces are possible if you prefer maximum protection over speed.
-4. **Success page (SEC-07)**: minimal details only (*recommended*), or also add a separate secret token to the link?
-5. **Admin session lifetime (SEC-08)**: 7 days (*recommended*), 1 day, or 30 days?
-6. **Hold limits (SEC-01) and stay rules (SEC-11)**: *recommended* 1 active online hold per phone number and 2 per IP, 30-night maximum for online bookings, admin bookings exempt. OK?
-7. **SEC-02 owner step**: once the fix lands you'll need to create your admin user(s) in the Supabase dashboard and switch off public sign-ups. I'll write the exact steps.
+### Stage 5 — controlled security checks
 
-## Fix plan (Stage 4 order)
-High: SEC-01, 02, 03, 04 → Medium: SEC-05, 06, 07, 08, 09 → Low: SEC-10 to SEC-19. Each fix gets its own commit (`security: SEC-xx <title>`) and a test that fails before the fix and passes after it. Database changes go in **new** migration files only.
+| # | Check | Result | Notes |
+|---|---|---|---|
+| 1 | Modified price, amount, cottage type or guest count in a booking request | **Not run** | No local booking fixture/service credentials for a full request flow. |
+| 2 | Fake/reused/mismatched payment signature or order | **Passed (unit coverage)** | Bad/mismatched signatures and mismatched orders are covered; a live-configured endpoint flow was not run. Payment replay is covered by DB idempotency tests. |
+| 3 | Webhook missing/bad signature and replay | **Passed (unit/DB coverage)** | Signature validation and duplicate confirmation are covered; a live-configured webhook request was not run. |
+| 4 | Ten parallel bookings for the last unit | **Not run** | Requires real PostgreSQL concurrency; the available PGlite harness is single-connection. |
+| 5 | Fifty pending holds from one IP or phone | **Not run (exact burst)** | DB tests pass the per-phone/IP limits and expiry cases; the 50-request HTTP burst was not run. |
+| 6 | Access another booking's success page by changing ID/code | **Not run (cross-booking case)** | A nonexistent UUID returned no booking details; two-existing-bookings access was not tested. |
+| 7 | Anon-key access to every table | **Not run (exhaustive matrix)** | Existing RLS tests pass for tested tables, writes and restricted functions; not every table/operation was enumerated. |
+| 8 | Every admin route/action logged out and as non-admin | **Not run (full matrix)** | CSV unauthenticated response and non-admin RLS checks passed; all routes/actions were not exercised. |
+| 9 | XSS payloads in guest/contact data viewed in admin and email | **Not run** | Existing application/email tests pass, but payload-based end-to-end rendering was not tested. |
+| 10 | SVG, renamed HTML and oversized Storage uploads | **Not run** | No Storage upload implementation or local upload harness was found. |
+| 11 | CSV formula injection | **Passed** | Unit test verifies `=HYPERLINK(...)` is neutralised. |
+| 12 | HTTP bursts against rate-limited endpoints | **Not run (HTTP burst)** | Database hold limits pass; endpoint burst tests were not run. |
+| 13 | Response headers and OWASP ZAP baseline | **Passed (headers); ZAP not run** | Local production responses on `/`, `/book` and `/gallery` include the configured headers. ZAP was unavailable. |
+| 14 | Client bundle, Gitleaks, npm audit and Semgrep | **Failed (partial)** | Bundle secret scan and Gitleaks passed during Stage 5. `npm audit --omit=dev` now reports 0 vulnerabilities; full audit still reports four moderate development-only advisories. Semgrep was unavailable. |
+
+### Stage 6 — regression checks
+
+| Check | Result | Evidence / limitation |
+|---|---|---|
+| Vitest | **Passed** | `npm.cmd test` — 9 files, 71 tests. |
+| Database suites | **Passed** | `npm.cmd run test:db` — 81 assertions across schema, payments, admin and hold-limit tests. |
+| ESLint | **Passed** | `npm.cmd run lint` — exit 0. |
+| TypeScript and route types | **Passed** | `npm.cmd run typecheck` — route type generation and `tsc --noEmit` passed. |
+| Production build | **Passed** | `npm.cmd run build` completed and generated routes. |
+| Home and 3D hero | **Passed (local smoke)** | Home returned 200; browser showed a canvas and no CSP console errors. This was not a visual-quality review. |
+| Cottage pages | **Not run (manual)** | `/cottages/aroma` returned 200 in an HTTP smoke check; visual and interactive flows were not tested. |
+| Gallery/lightbox | **Passed (local browser)** | Gallery loaded and lightbox opened with no CSP console errors. |
+| Booking, success page, Razorpay test payment | **Not run** | Payment credentials are not configured; no real/test transaction was attempted. `/book` returned 200. |
+| Emails and WhatsApp | **Not run** | No Resend credentials or end-to-end delivery test; WhatsApp was not opened. |
+| Admin login/dashboard/bookings/manual booking | **Not run** | No authenticated Supabase test account was used. |
+| Blocked dates, price overrides and CSV export UI | **Not run (UI)** | Database tests cover related logic; browser/admin workflows were not exercised. |
+
+All checks were limited to the local repository and localhost. No production service or public target was contacted.
+
+## D. Fixed
+
+| Severity | Fixed | Findings |
+|---|---:|---|
+| Critical | 0 | — |
+| High | 3 | SEC-01, SEC-03, SEC-04 |
+| Medium | 1 | SEC-06 |
+| Low | 1 | SEC-13 |
+| **Total** | **5** | |
+
+## E. Remaining risks and owner actions
+
+Fourteen findings remain open: SEC-02, SEC-05, SEC-07–SEC-12 and SEC-14–SEC-19.
+
+- **Before enabling public admin access:** verify Supabase email confirmation and public sign-up settings; create allow-listed owner accounts intentionally (SEC-02).
+- **Before public launch:** implement reliable shared rate limits for the unprotected endpoints and admin login (SEC-05, SEC-12); reduce PII on booking success pages and harden Supabase cookie settings (SEC-07, SEC-08).
+- **Prove booking concurrency:** run the 10-way last-unit test against a real local PostgreSQL or a user-approved Supabase preview branch (SEC-09). Do not use production for this test.
+- Address logging minimisation, database date/stay constraints, email subject input, zero-advance bookings, magic-link redirect origin, proxy behavior when Supabase is unavailable, direct table grants and `SECURITY DEFINER` search paths (SEC-10–SEC-11, SEC-14–SEC-19).
+- Configure test Supabase/Razorpay/Resend credentials in a private local environment to complete the booking, payment, email and admin flows. Do not use live payment keys for testing.
+- Run OWASP ZAP and Semgrep when available; repeat Gitleaks against the latest commit history before publishing.
+- Four moderate advisories remain in development-only dependencies. Production dependencies pass `npm audit --omit=dev`.
+- The report does not verify production environment settings, Supabase dashboard policies, DNS/HTTPS, live webhooks, account 2FA or payment/email delivery. The owner should verify these before launch.
+
+## F. Verdict
+
+**NOT READY FOR LAUNCH**
+
+The known Critical category is clear and five findings have fixes, but the conditional High admin-auth finding and other access-control, privacy and operational hardening items remain open. Several end-to-end checks also require service credentials that were not available. Reassess after those findings are addressed and the remaining tests pass. This audit does not claim the application is completely secure.
