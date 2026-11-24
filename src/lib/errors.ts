@@ -20,13 +20,16 @@ export class NotConfiguredError extends AppError {
   }
 }
 
+export const noStore = { "Cache-Control": "no-store" } as const;
+
 /** Converts any thrown error into a JSON response without leaking internals. */
 export function errorResponse(e: unknown) {
+  const init = (status: number) => ({ status, headers: noStore });
   if (e instanceof AppError) {
-    return NextResponse.json({ error: e.code, message: e.message }, { status: e.status });
+    return NextResponse.json({ error: e.code, message: e.message }, init(e.status));
   }
   if (e instanceof PricingError) {
-    return NextResponse.json({ error: e.code, message: e.message }, { status: 400 });
+    return NextResponse.json({ error: e.code, message: e.message }, init(400));
   }
   if (e instanceof ZodError) {
     return NextResponse.json(
@@ -35,14 +38,12 @@ export function errorResponse(e: unknown) {
         message: "Please check the details and try again.",
         issues: e.issues.map((i) => ({ path: i.path.join("."), message: i.message })),
       },
-      { status: 400 },
+      init(400),
     );
   }
   console.error("[api] unexpected error", e);
   return NextResponse.json(
     { error: "SERVER_ERROR", message: "Something went wrong. Please try again or contact us on WhatsApp." },
-    { status: 500 },
+    init(500),
   );
 }
-
-export const noStore = { "Cache-Control": "no-store" } as const;

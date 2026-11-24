@@ -38,8 +38,12 @@ export function StepReview({
   quoteError,
   quoteLoading,
   payError,
+  payInfo,
+  testMode,
   onEdit,
 }: {
+  payInfo: string | null;
+  testMode: boolean;
   cottage: BookCottage;
   draft: Draft & { checkIn: string; checkOut: string; details: GuestDetailsInput };
   quote?: ServerQuote;
@@ -113,6 +117,17 @@ export function StepReview({
           )}
         </div>
 
+        {payInfo && (
+          <p role="status" className="rounded-xl bg-lake/5 px-4 py-3 text-sm font-medium text-lake ring-1 ring-lake/15">
+            {payInfo}
+          </p>
+        )}
+        {testMode && (
+          <p className="rounded-xl bg-sunset/15 px-4 py-3 text-sm ring-1 ring-sunset/40">
+            <strong>Test mode:</strong> no real money is charged. Use Razorpay test UPI <code>success@razorpay</code> or a
+            test card.
+          </p>
+        )}
         {payError && (
           isFallbackError(payError) ? (
             <WhatsAppFallback tone="warning" title="We couldn't start the payment" message={payError.message} />

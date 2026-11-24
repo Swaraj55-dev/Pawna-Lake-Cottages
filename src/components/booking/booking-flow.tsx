@@ -2,12 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { format } from "date-fns";
 import { Loader2 } from "lucide-react";
 import type { CottageSlug } from "@/config/site";
 import { formatINR } from "@/lib/format";
 import { guestDetailsSchema, type GuestDetailsInput, type StayRequest } from "@/lib/validation";
 import { useProvideEnquiry } from "@/components/contact/enquiry-store";
 import { ApiError, apiFetch } from "./api";
+import { openCheckout, type BookingSession } from "./checkout";
 import { useQuote } from "./hooks";
 import { BookingProgress, STEPS } from "./progress";
 import { StepCottage } from "./step-cottage";
@@ -45,7 +47,13 @@ export function BookingFlow({ cottages }: { cottages: BookCottage[] }) {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [step, setStep] = useState(0);
   const [maxReached, setMaxReached] = useState(0);
-  const [pay, setPay] = useState<{ busy: boolean; error: ApiError | null }>({ busy: false, error: null });
+  const [pay, setPay] = useState<{ busy: boolean; error: ApiError | null; info: string | null }>({
+    busy: false,
+    error: null,
+    info: null,
+  });
+  const [testMode, setTestMode] = useState(false);
+  const sessionRef = useRef<{ key: string; session: BookingSession } | null>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const topRef = useRef<HTMLDivElement>(null);
   const firstRender = useRef(true);
@@ -119,7 +127,7 @@ export function BookingFlow({ cottages }: { cottages: BookCottage[] }) {
     (n: number) => {
       setStep(n);
       setMaxReached((m) => Math.max(m, n));
-      setPay({ busy: false, error: null });
+      setPay({ busy: false, error: null, info: null });
       const url = new URL(window.location.href);
       if (n === 0) url.searchParams.delete("step");
       else url.searchParams.set("step", String(n + 1));
@@ -147,22 +155,64 @@ export function BookingFlow({ cottages }: { cottages: BookCottage[] }) {
     name: draft?.details?.name || undefined,
   });
 
-  /* ---------------- payment (Razorpay wired in Phase 7) ---------------- */
+  /* ---------------- payment: create booking + order, open Razorpay Checkout ---------------- */
   const startPayment = async () => {
     if (!stay || !draft?.details) return;
-    setPay({ busy: true, error: null });
+    setPay({ busy: true, error: null, info: null });
     try {
       const details = guestDetailsSchema.parse(draft.details);
-      const res = await apiFetch<{ bookingId: string }>("/api/bookings", {
-        method: "POST",
-        body: JSON.stringify({ stay, details }),
-      });
-      router.push(`/book/success/${res.bookingId}`);
+      const key = JSON.stringify({ stay, details });
+
+      // Reuse the existing hold/order if the guest closed Checkout and retries.
+      const prev = sessionRef.current;
+      const reusable =
+        prev?.key === key && prev.session.expiresAt && Date.parse(prev.session.expiresAt) - Date.now() > 60_000;
+      const session = reusable
+        ? prev.session
+        : await apiFetch<BookingSession>("/api/bookings", { method: "POST", body: key });
+      sessionRef.current = { key, session };
+      setTestMode(Boolean(session.testMode));
+
+      if (session.confirmed || !session.checkout) {
+        router.push(`/book/success/${session.bookingId}`);
+        return;
+      }
+
+      const result = await openCheckout(session);
+      if (result.type === "success") {
+        setPay({ busy: true, error: null, info: "Payment received — confirming your booking…" });
+        try {
+          await apiFetch("/api/payments/verify", { method: "POST", body: JSON.stringify(result.data) });
+        } catch (e) {
+          // The webhook confirms as a backup; the success page polls until it does.
+          console.warn("verify failed; relying on webhook", e);
+        }
+        sessionRef.current = null;
+        router.push(`/book/success/${session.bookingId}`);
+        return;
+      }
+
+      const until = session.expiresAt ? format(new Date(session.expiresAt), "h:mm a") : null;
+      if (result.type === "dismissed") {
+        setPay({
+          busy: false,
+          error: null,
+          info: `Payment not completed.${until ? ` Your cottage is held until ${until}` : ""} — tap Pay to try again.`,
+        });
+      } else {
+        setPay({
+          busy: false,
+          info: null,
+          error: new ApiError("PAYMENT_FAILED", `${result.reason} You can try again with another method (UPI, card or net banking).`, 402),
+        });
+      }
     } catch (e) {
       setPay({
         busy: false,
-        error: e instanceof ApiError ? e : new ApiError("SERVER_ERROR", "We couldn't start the payment.", 500),
+        info: null,
+        error: e instanceof ApiError ? e : new ApiError("SERVER_ERROR", e instanceof Error ? e.message : "We couldn't start the payment.", 500),
       });
+      if (e instanceof ApiError && e.code === "NOT_AVAILABLE") sessionRef.current = null;
       quote.refresh();
     }
   };
@@ -271,6 +321,8 @@ export function BookingFlow({ cottages }: { cottages: BookCottage[] }) {
               quoteError={quote.error}
               quoteLoading={quote.loading}
               payError={pay.error}
+              payInfo={pay.info}
+              testMode={testMode}
               onEdit={goTo}
             />
           )}
