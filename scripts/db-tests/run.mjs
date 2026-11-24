@@ -13,11 +13,16 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const migDir = path.resolve(here, "../../supabase/migrations");
 const migs = readdirSync(migDir).filter((f) => f.endsWith(".sql")).sort().map((f) => path.join(migDir, f));
 
-const suites = [
-  ["schema.test.mjs", migs.slice(0, 1)],
-  ["payments.test.mjs", migs.slice(0, 2)],
-  ["admin.test.mjs", migs],
-];
+// Every suite runs against ALL migrations, i.e. the schema as deployed.
+const suites = ["schema.test.mjs", "payments.test.mjs", "admin.test.mjs", ...extraSuites()].map((f) => [f, migs]);
+
+/** Any additional *.test.mjs files in this folder (e.g. per-fix security suites). */
+function extraSuites() {
+  return readdirSync(here)
+    .filter((f) => f.endsWith(".test.mjs") && !["schema.test.mjs", "payments.test.mjs", "admin.test.mjs"].includes(f))
+    .filter((f) => !f.startsWith("concurrency")) // needs a real Postgres: npm run test:db:concurrency
+    .sort();
+}
 
 let failed = 0;
 for (const [file, args] of suites) {

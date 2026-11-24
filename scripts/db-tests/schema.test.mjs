@@ -1,40 +1,8 @@
-// Runs the Supabase migration against PGlite (real Postgres in WASM) with
-// Supabase stubs, then exercises availability, booking, expiry and RLS.
-import { PGlite } from "@electric-sql/pglite";
-import { pgcrypto } from "@electric-sql/pglite/contrib/pgcrypto";
-import { readFileSync } from "node:fs";
+// Exercises availability, booking, expiry and RLS on PGlite with Supabase stubs.
+import { createTestDb, makeAsserts } from "./harness.mjs";
 
-const migrationPath = process.argv[2];
-const db = new PGlite({ extensions: { pgcrypto } });
-
-let pass = 0, fail = 0;
-const ok = (cond, msg, extra = "") => {
-  if (cond) { pass++; console.log("  ✓", msg); }
-  else { fail++; console.log("  ✗", msg, extra); }
-};
-const expectError = async (sql, params, match, msg) => {
-  try { await db.query(sql, params); ok(false, msg, "(no error raised)"); }
-  catch (e) { ok(String(e.message).includes(match), msg, `(got: ${e.message})`); }
-};
-
-// --- Supabase stubs -------------------------------------------------------
-await db.exec(`
-  create role anon nologin; create role authenticated nologin; create role service_role nologin bypassrls;
-  create schema auth;
-  create function auth.jwt() returns jsonb language sql stable as
-    $$ select coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb $$;
-  grant usage on schema auth to anon, authenticated, service_role;
-  grant execute on function auth.jwt() to anon, authenticated, service_role;
-  grant usage on schema public to anon, authenticated, service_role;
-  -- Supabase grants table privileges to these roles by default; RLS does the filtering
-  alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
-`);
-
-const sql = readFileSync(migrationPath, "utf8");
-await db.exec(sql);
-console.log("migration applied");
-await db.exec(sql);
-console.log("migration re-applied (idempotent)");
+const db = await createTestDb(process.argv.slice(2));
+const { ok, expectError, done } = makeAsserts(db);
 
 const avail = async (slug, from, to) =>
   (await db.query("select night::text, available, booked, blocked from get_availability($1,$2,$3)", [slug, from, to])).rows;
@@ -109,5 +77,4 @@ ok((await db.query("select * from bookings")).rows.length > 0, "admin (case-inse
 ok((await db.query("select * from blocked_dates")).rows.length === 2, "admin sees blocked dates");
 await db.exec("reset role");
 
-console.log(`\n${pass} passed, ${fail} failed`);
-process.exit(fail ? 1 : 0);
+done();

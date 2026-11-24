@@ -1,22 +1,9 @@
-import { PGlite } from "@electric-sql/pglite";
-import { pgcrypto } from "@electric-sql/pglite/contrib/pgcrypto";
-import { readFileSync } from "node:fs";
+// Tests admin_set_booking_status on PGlite with Supabase stubs.
+import { createTestDb, makeAsserts } from "./harness.mjs";
 
-const files = process.argv.slice(2);
-const db = new PGlite({ extensions: { pgcrypto } });
-let pass = 0, fail = 0;
-const ok = (c, m, x = "") => { if (c) pass++; else fail++; console.log(`  ${c ? "✓" : "✗"} ${m}`, c ? "" : x); };
-const err = async (sql, params, match, m) => { try { await db.query(sql, params); ok(false, m, "(no error)"); } catch (e) { ok(e.message.includes(match), m, e.message); } };
-
-await db.exec(`
-  create role anon nologin; create role authenticated nologin; create role service_role nologin bypassrls;
-  create schema auth; create function auth.jwt() returns jsonb language sql stable as $$ select '{}'::jsonb $$;
-  grant usage on schema public to anon, authenticated, service_role;
-  alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
-`);
-for (const f of files) await db.exec(readFileSync(f, "utf8"));
-for (const f of files) await db.exec(readFileSync(f, "utf8")); // all idempotent
-console.log("3 migrations applied twice");
+const db = await createTestDb(process.argv.slice(2));
+const { ok, expectError, done } = makeAsserts(db);
+const err = (sql, params, match, m) => expectError(sql, params, match, m);
 
 const mk = async (ci, co, n, status = "pending_payment") =>
   (await db.query(`select * from create_booking('bella',$1,$2,$3,$3,'G','9876543210',null,null,null,1000,500,null,'phone',$4)`, [ci, co, n, status])).rows[0];
@@ -58,5 +45,4 @@ await db.exec("set role anon");
 await err(SQL, [c.id, "cancelled", null], "permission denied", "anon cannot change status");
 await db.exec("reset role");
 
-console.log(`\n${pass} passed, ${fail} failed`);
-process.exit(fail ? 1 : 0);
+done();

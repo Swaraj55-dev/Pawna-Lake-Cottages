@@ -1,24 +1,8 @@
-// Tests confirm_booking_payment on PGlite with both migrations applied.
-import { PGlite } from "@electric-sql/pglite";
-import { pgcrypto } from "@electric-sql/pglite/contrib/pgcrypto";
-import { readFileSync } from "node:fs";
+// Tests confirm_booking_payment on PGlite with Supabase stubs.
+import { createTestDb, makeAsserts } from "./harness.mjs";
 
-const [m1, m2] = process.argv.slice(2);
-const db = new PGlite({ extensions: { pgcrypto } });
-let pass = 0, fail = 0;
-const ok = (c, m, x = "") => { if (c) pass++; else fail++; console.log(`  ${c ? "✓" : "✗"} ${m}`, c ? "" : x); };
-
-await db.exec(`
-  create role anon nologin; create role authenticated nologin; create role service_role nologin bypassrls;
-  create schema auth;
-  create function auth.jwt() returns jsonb language sql stable as $$ select '{}'::jsonb $$;
-  grant usage on schema public to anon, authenticated, service_role;
-  alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
-`);
-await db.exec(readFileSync(m1, "utf8"));
-await db.exec(readFileSync(m2, "utf8"));
-await db.exec(readFileSync(m2, "utf8")); // idempotent
-console.log("migrations applied");
+const db = await createTestDb(process.argv.slice(2));
+const { ok, done } = makeAsserts(db);
 
 const mk = async (ci, co, n, order) => {
   const b = (await db.query(
@@ -89,5 +73,4 @@ await db.exec("set role anon");
 try { await confirm("order_1", "pay_1"); ok(false, "anon blocked"); } catch (e) { ok(/permission denied/.test(e.message), "anon cannot call confirm_booking_payment"); }
 await db.exec("reset role");
 
-console.log(`\n${pass} passed, ${fail} failed`);
-process.exit(fail ? 1 : 0);
+done();
